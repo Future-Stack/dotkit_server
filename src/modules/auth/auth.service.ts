@@ -32,6 +32,12 @@ export class AuthService {
                 phone: data.phone
             }
         });
+        
+        const new = await this.prisma.user.findUnique({
+            where: {
+                phone: data.phone
+            }
+        });
 
         if (user) throw new BadRequestException(ERROR_MESSAGES.USER.USER_ALREADY_EXISTS);
         if (checkPhone) throw new BadRequestException(ERROR_MESSAGES.USER.PHONE_ALREADY_EXISTS);
