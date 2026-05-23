@@ -39,6 +39,13 @@ export interface IEnv {
     ADMIN_CONFIG: {
         SUPER_ADMIN_EMAIL: string;
         SUPER_ADMIN_PASSWORD: string;
+    },
+    EXTERNAL_APIS: {
+        GOOGLE_MAPS_API_KEY?: string;
+        RENTCAST_API_KEY?: string;
+        /** FBI Crime Data API key — obtain free at https://api.data.gov/signup/ */
+        FBI_API_KEY?: string;
+        HUD_API_TOKEN?: string;
     }
 }
 
@@ -94,6 +101,13 @@ export default registerAs('env', (): IEnv => {
         ADMIN_CONFIG: {
             SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL as string,
             SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD as string,
+        },
+        // External APIs are optional — server boots without them, endpoints return graceful fallback
+        EXTERNAL_APIS: {
+            GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
+            RENTCAST_API_KEY: process.env.RENTCAST_API_KEY,
+            FBI_API_KEY: process.env.FBI_API_KEY,
+            HUD_API_TOKEN: process.env.HUD_API_TOKEN,
         }
     };
 });

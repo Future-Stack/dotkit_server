@@ -103,6 +103,33 @@ model PropertyCalculation {
   loanPointsCost      Decimal? @db.Decimal(12, 2)
   lenderFees          Decimal? @db.Decimal(12, 2)
 
+  // --- GEOCODE ---
+  latitude         Float?
+  longitude        Float?
+  formattedAddress String?
+  cityName         String?
+  stateName        String?
+  zipCode          String?
+
+  // --- HUD FMR DATA ---
+  fmrStudio     Decimal? @db.Decimal(10, 2)
+  fmrOneBed     Decimal? @db.Decimal(10, 2)
+  fmrTwoBed     Decimal? @db.Decimal(10, 2)
+  fmrThreeBed   Decimal? @db.Decimal(10, 2)
+  fmrFourBed    Decimal? @db.Decimal(10, 2)
+
+  // --- CRIME DATA (FBI Crime Data API) ---
+  crimeScore     Float?
+  crimeRiskLabel String?   // "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN"
+  crimeAreaName  String?   // Resolved county/city name from FBI (e.g. "Jefferson County, AL")
+  crimeIncidents Json?     // FBI offense-type breakdown: [{ type, count, percentage }]
+
+  // --- COMPS (RentCast) ---
+  rentalComps Json? // array of RentalComp objects
+  soldComps   Json? // array of SoldComp objects
+  rentEstimate Decimal? @db.Decimal(10, 2)
+  valueEstimate Decimal? @db.Decimal(12, 2)
+
   // --- RELATIONS ---
   user      User             @relation(fields: [userId], references: [userId])
   breakdown ScoreBreakdown[]

@@ -1,212 +1,114 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreatePropertyDto } from './dto/create.property.dto';
-import { SaveBrrrPropertyDataDto } from './dto/save.brrrr.property.data.dto';
-import { SaveSection8PropertyDataDto } from './dto/save.section8.property.dto';
 import { CalculateBrrrPropertyDto } from './dto/calculate.brrrr.property.dto';
 import { CalculateTurnkeyPropertyDto } from './dto/calculate.turnkey.property.dto';
+import { CalculateSection8Dto } from './dto/calculate.section8.dto';
 import { CreateBrrrrDto } from './dto/create.save.brrr.property.dto';
-import { CreateTurnkeyDto } from './dto/create.save.turnkey.dto';
-import { CreateTurkenyDTO_Mod } from './dto/save .turkeny.property.dto';
+import { CreateTurnkeyDTO_Mod } from './dto/save.turnkey.property.dto';
 import { Section8RequestDto } from './dto/section.e.request.dto';
+import { ExternalApisService } from '../external-apis/external-apis.service';
+import { GeocodeResult } from '../external-apis/dto/geocode-response.dto';
+import { FmrResult } from '../external-apis/dto/fmr-response.dto';
+import { CompsResult } from '../external-apis/dto/comps-response.dto';
+import { CrimeResult } from '../external-apis/dto/crime-response.dto';
 
 @Injectable()
 export class PropertyService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private externalApis: ExternalApisService,
+  ) {}
 
-  // async calculateBrrrr(data: CreatePropertyDto) {
-  //   // 1. Unified Cash Flow Logic (Used by all sub-functions)
-  //   const getOfficialCashFlow = (dto: CreatePropertyDto, mortgage: number) => {
-  //     const annualIncome = dto.monthlyRent * 12;
-  //     const vacancy = (dto.vacancyRate / 100) * annualIncome;
-  //     const effectiveIncome = annualIncome - vacancy;
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADDRESS ENRICHMENT — One address → full property intelligence
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  //     const maintenance = (dto.maintenanceRate / 100) * effectiveIncome;
-  //     const management = (dto.managementRate / 100) * effectiveIncome;
-  //     const capex = (dto.capexRate / 100) * effectiveIncome;
+  /**
+   * Geocode an address and trigger all enrichment APIs in parallel.
+   * Returns a structured object ready for the frontend to display and feed
+   * back into the calculator endpoints.
+   */
+  async enrichAddress(address: string) {
+    // Step 1: Geocode to extract structured location data
+    const geocode: GeocodeResult = await this.externalApis.geocodeAddress(address);
 
-  //     const totalAnnualExpenses =
-  //       dto.annualPropertyTax +
-  //       dto.annualInsurance +
-  //       dto.annualUtilities +
-  //       dto.annualOtherExpense +
-  //       maintenance +
-  //       management +
-  //       capex;
+    // Step 2: All enrichment APIs fire in parallel — none blocks the others
+    const [fmr, comps, crime] = await Promise.allSettled([
+      this.externalApis.getFmrByZipCode(geocode.zipCode),
+      this.externalApis.getRentalAndSoldComps(
+        geocode.latitude,
+        geocode.longitude,
+        geocode.formattedAddress,
+      ),
+      this.externalApis.getCrimeData(geocode.latitude, geocode.longitude, geocode.state, geocode.city),
+    ]);
 
-  //     const monthlyExpenses = totalAnnualExpenses / 12;
-  //     const monthlyCashFlow = dto.monthlyRent - monthlyExpenses - mortgage;
+    const fmrData: FmrResult | null =
+      fmr.status === 'fulfilled' ? fmr.value : null;
+    const compsData: CompsResult =
+      comps.status === 'fulfilled' ? comps.value : { rental: [], sold: [] };
+    const crimeData: CrimeResult =
+      crime.status === 'fulfilled'
+        ? crime.value
+        : { crimeScore: 0, riskLabel: 'UNKNOWN', totalIncidents: 0, crimesByType: [], dataSource: 'UNKNOWN', incidents: [] };
 
-  //     return {
-  //       monthly: Number(monthlyCashFlow.toFixed(2)),
-  //       annual: Number((monthlyCashFlow * 12).toFixed(2)),
-  //       totalAnnualExpenses,
-  //     };
-  //   };
+    return {
+      geocode,
+      fmr: fmrData
+        ? {
+            county: fmrData.county,
+            state: fmrData.state,
+            year: fmrData.year,
+            rents: {
+              studio: fmrData.studio,
+              oneBedroom: fmrData.oneBedroom,
+              twoBedroom: fmrData.twoBedroom,
+              threeBedroom: fmrData.threeBedroom,
+              fourBedroom: fmrData.fourBedroom,
+            },
+          }
+        : null,
+      comps: {
+        rental: compsData.rental,
+        sold: compsData.sold,
+        estimates: {
+          rentEstimate: compsData.rentEstimate ?? null,
+          valueEstimate: compsData.valueEstimate ?? null,
+        },
+      },
+      crime: {
+        crimeScore: crimeData.crimeScore,
+        riskLabel: crimeData.riskLabel,
+        totalIncidents: crimeData.totalIncidents,
+        areaName: crimeData.areaName ?? null,
+        population: crimeData.population ?? null,
+        dataSource: crimeData.dataSource,
+        crimesByType: crimeData.crimesByType,
+        areaSummary: crimeData.areaSummary ?? null,
+        // Legacy incidents array (backward-compat with save endpoints)
+        incidents: crimeData.incidents,
+      },
+    };
+  }
 
-  //   // 2. Internal Helper: Main CoC and Refinance Logic
-  //   function calculateBrrrrMetrics(dto: CreatePropertyDto) {
-  //     // --- DEFINITIONS ---
-  //     const allInCost =
-  //       dto.purchasePrice + dto.rehabCost + dto.closingCost + dto.holdingCost;
-  //     const initialCashInvested =
-  //       dto.downPayment + dto.rehabCost + dto.closingCost + dto.holdingCost;
-  //     const initialLoanAmount = dto.purchasePrice - dto.downPayment;
-
-  //     // --- REFINANCE PHASE ---
-  //     const refinanceLoanAmount =
-  //       (dto.refinanceLtv / 100) * dto.arvAfterRepairValue;
-
-  //     // Correction: Cash Out = Refi Loan - Initial Loan Payoff - Refi Costs
-  //     const cashOut =
-  //       refinanceLoanAmount - initialLoanAmount - dto.refinanceCost;
-
-  //     // Correction: Cash Left = Initial Cash Invested - Cash Out
-  //     const cashLeftInDeal = initialCashInvested - cashOut;
-
-  //     // Correction: Cash-Out % = Cash Out / Initial Invested
-  //     const cashOutPercentage = (cashOut / initialCashInvested) * 100;
-
-  //     // Post-Refi Mortgage
-  //     const refiMonthlyRate = dto.refinanceInterestRate / 100 / 12;
-  //     const refiMortgage =
-  //       (refinanceLoanAmount * refiMonthlyRate) /
-  //       (1 - Math.pow(1 + refiMonthlyRate, -(dto.refinanceLoanTerm * 12)));
-
-  //     // Synchronized Cash Flow
-  //     const flow = getOfficialCashFlow(dto, refiMortgage);
-  //     const postRefiCoC =
-  //       cashLeftInDeal > 0 ? (flow.annual / cashLeftInDeal) * 100 : 0;
-
-  //     // NOI for Cap Rate & DSCR
-  //     const effectiveIncome =
-  //       dto.monthlyRent * 12 * (1 - dto.vacancyRate / 100);
-  //     const noi =
-  //       effectiveIncome -
-  //       (dto.annualPropertyTax +
-  //         dto.annualInsurance +
-  //         dto.annualUtilities +
-  //         dto.annualOtherExpense +
-  //         ((dto.maintenanceRate + dto.managementRate + dto.capexRate) / 100) *
-  //           effectiveIncome);
-
-  //     return {
-  //       allInCost,
-  //       initialCashInvested,
-  //       cashOut,
-  //       cashLeftInDeal,
-  //       cashOutPercentage,
-  //       postRefiCoC,
-  //       refiMortgage,
-  //       flow,
-  //       noi,
-  //       onePercentRule: dto.monthlyRent >= allInCost * 0.01,
-  //       capRate: (noi / dto.arvAfterRepairValue) * 100,
-  //       dscr: refiMortgage * 12 > 0 ? noi / (refiMortgage * 12) : 0,
-  //     };
-  //   }
-
-  //   const metrics = calculateBrrrrMetrics(data);
-
-  //   // 3. Deterministic Deal Scoreboard
-  //   const getDealScoreboard = (m: any) => {
-  //     const scoreLookup = (val, good, avg) => {
-  //       if (val >= good) return { score: 10, status: 'GOOD' };
-  //       if (val >= avg) return { score: 5, status: 'AVERAGE' };
-  //       return { score: 0, status: 'BAD' };
-  //     };
-
-  //     const breakdown = [
-  //       {
-  //         name: 'Cash Flow',
-  //         value: m.flow.annual,
-  //         ...scoreLookup(m.flow.annual, 3000, 1200),
-  //       },
-  //       {
-  //         name: 'Post-Refi CoC',
-  //         value: m.postRefiCoC,
-  //         ...scoreLookup(m.postRefiCoC, 12, 6),
-  //       },
-  //       { name: 'Cap Rate', value: m.capRate, ...scoreLookup(m.capRate, 8, 5) },
-  //       { name: 'DSCR', value: m.dscr, ...scoreLookup(m.dscr, 1.25, 1.0) },
-  //       {
-  //         name: '1% Rule (All-In)',
-  //         value: m.onePercentRule,
-  //         score: m.onePercentRule ? 10 : 0,
-  //         status: m.onePercentRule ? 'GOOD' : 'BAD',
-  //       },
-  //     ];
-
-  //     const totalScore = breakdown.reduce((sum, i) => sum + i.score, 0);
-  //     const rating =
-  //       totalScore >= 40
-  //         ? 'GOOD DEAL'
-  //         : totalScore >= 25
-  //           ? 'AVERAGE DEAL'
-  //           : 'BAD DEAL';
-
-  //     return { totalScore, rating, breakdown };
-  //   };
-
-  //   return {
-  //     strategy: 'BRRRR',
-  //     stateAddress: data.stateAddress,
-  //     purchasePrice: data.purchasePrice,
-  //     downPayment: data.downPayment,
-  //     annualInsurance: data.annualInsurance,
-  //     annualPropertyTax: data.annualPropertyTax,
-  //     vacancyRate: data.vacancyRate,
-  //     maintenanceRate: data.maintenanceRate,
-  //     managementRate: data.managementRate,
-  //     capexRate: data.capexRate,
-  //     responseData: {
-  //       KeyMetrics: {
-  //         allInCost: metrics.allInCost,
-  //         initialCashInvested: metrics.initialCashInvested,
-  //         monthlyCashFlow: metrics.flow.monthly,
-  //         postRefiCoC: Number(metrics.postRefiCoC.toFixed(2)),
-  //         cashOutAmount: Number(metrics.cashOut.toFixed(2)),
-  //         cashLeftInDeal: Number(metrics.cashLeftInDeal.toFixed(2)),
-  //         cashOutPercentage: Number(metrics.cashOutPercentage.toFixed(2)),
-  //         capRate: Number(metrics.capRate.toFixed(2)),
-  //         DSCR: Number(metrics.dscr.toFixed(2)),
-  //         OnePercentRuleAllIn: metrics.onePercentRule,
-  //         netOperatingIncome: Number(metrics.noi.toFixed(0)),
-  //       },
-  //       incomeExpance: {
-  //         income: {
-  //           monthlyRent: data.monthlyRent,
-  //           annualRent: data.monthlyRent * 12,
-  //           effectiveIncome:
-  //             data.monthlyRent * 12 * (1 - data.vacancyRate / 100),
-  //         },
-  //         expenses: { totalExpenses: metrics.flow.totalAnnualExpenses },
-  //         noi: metrics.noi,
-  //         mortgage: {
-  //           monthlyMortgage: Number(metrics.refiMortgage.toFixed(2)),
-  //           annualMortgage: Number((metrics.refiMortgage * 12).toFixed(2)),
-  //         },
-  //         netCashFlow: metrics.flow,
-  //       },
-  //       dealScoreboard: getDealScoreboard(metrics),
-  //     },
-  //   };
-  // }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BRRRR CALCULATOR
+  // ═══════════════════════════════════════════════════════════════════════════
 
   async calculateBrrrr(dto: CalculateBrrrPropertyDto) {
-    // ---------------- Down Payment Logic ----------------
+    // ─── Down Payment ──────────────────────────────────────────────────────
     const downPayment =
       dto.downPayment ?? (dto.purchasePrice * dto.downPaymentPercent) / 100;
 
     const loanAmount = dto.purchasePrice - downPayment;
-
     const loanPointsCost = (loanAmount * dto.loanPoints) / 100;
 
-    // ---------------- Base Income ----------------
+    // ─── Base Income ───────────────────────────────────────────────────────
     const annualRent = dto.monthlyRent * 12;
     const effectiveIncome = annualRent * (1 - dto.vacancyRate / 100);
 
-    // ---------------- Expenses ----------------
+    // ─── Expenses ──────────────────────────────────────────────────────────
     const maintenance = (dto.maintenanceRate / 100) * effectiveIncome;
     const management = (dto.managementRate / 100) * effectiveIncome;
     const capex = (dto.capexRate / 100) * effectiveIncome;
@@ -220,28 +122,24 @@ export class PropertyService {
       management +
       capex;
 
-    // ---------------- NOI ----------------
+    // ─── NOI ───────────────────────────────────────────────────────────────
     const noi = effectiveIncome - totalExpenses;
 
-    // ---------------- Refinance ----------------
-    const refinanceLoanAmount =
-      (dto.refinanceLtv / 100) * dto.arvAfterRepairValue;
+    // ─── Refinance (BRRRR-ONLY logic) ─────────────────────────────────────
+    const refinanceLoanAmount = (dto.refinanceLtv / 100) * dto.arvAfterRepairValue;
 
     const refiRate = dto.refinanceInterestRate / 100 / 12;
     const refiPayments = dto.refinanceLoanTerm * 12;
-
     const refiMortgage =
       (refinanceLoanAmount * refiRate) /
       (1 - Math.pow(1 + refiRate, -refiPayments));
 
-    // ---------------- Cash Flow ----------------
+    // ─── Cash Flow ─────────────────────────────────────────────────────────
     const monthlyExpenses = totalExpenses / 12;
-
     const monthlyCashFlow = dto.monthlyRent - monthlyExpenses - refiMortgage;
-
     const annualCashFlow = monthlyCashFlow * 12;
 
-    // ---------------- Investment ----------------
+    // ─── Investment Totals ─────────────────────────────────────────────────
     const allInCost =
       dto.purchasePrice +
       dto.rehabCost +
@@ -250,55 +148,30 @@ export class PropertyService {
       loanPointsCost;
 
     const initialCashInvested =
-      downPayment +
-      dto.rehabCost +
-      dto.closingCost +
-      dto.holdingCost +
-      loanPointsCost;
+      downPayment + dto.rehabCost + dto.closingCost + dto.holdingCost + loanPointsCost;
 
-    // ---------------- BRRRR Core ----------------
+    // ─── BRRRR Core Metrics ────────────────────────────────────────────────
     const cashOut = refinanceLoanAmount - loanAmount - dto.refinanceCost;
-
     const cashLeftInDeal = initialCashInvested - cashOut;
-
-    const postRefiCoC =
-      cashLeftInDeal > 0 ? (annualCashFlow / cashLeftInDeal) * 100 : 0;
-
+    const postRefiCoC = cashLeftInDeal > 0 ? (annualCashFlow / cashLeftInDeal) * 100 : 0;
     const equityCaptured = dto.arvAfterRepairValue - allInCost;
 
     const dscr = refiMortgage * 12 > 0 ? noi / (refiMortgage * 12) : 0;
-
     const capRate = (noi / dto.arvAfterRepairValue) * 100;
+    const onePercentRule = dto.monthlyRent >= allInCost * 0.01;
 
+    // ─── Scoreboard ────────────────────────────────────────────────────────
     const scoreLookup = (val: number, good: number, avg: number) => {
       if (val >= good) return { score: 10, status: 'GOOD' };
       if (val >= avg) return { score: 5, status: 'AVERAGE' };
       return { score: 0, status: 'BAD' };
     };
 
-    const onePercentRule = dto.monthlyRent >= allInCost * 0.01;
-
     const breakdown = [
-      {
-        name: 'Cash Flow',
-        value: annualCashFlow,
-        ...scoreLookup(annualCashFlow, 3000, 1200),
-      },
-      {
-        name: 'Post-Refi CoC',
-        value: postRefiCoC,
-        ...scoreLookup(postRefiCoC, 12, 6),
-      },
-      {
-        name: 'Cap Rate',
-        value: capRate,
-        ...scoreLookup(capRate, 8, 5),
-      },
-      {
-        name: 'DSCR',
-        value: dscr,
-        ...scoreLookup(dscr, 1.25, 1.0),
-      },
+      { name: 'Cash Flow', value: annualCashFlow, ...scoreLookup(annualCashFlow, 3000, 1200) },
+      { name: 'Post-Refi CoC', value: postRefiCoC, ...scoreLookup(postRefiCoC, 12, 6) },
+      { name: 'Cap Rate', value: capRate, ...scoreLookup(capRate, 8, 5) },
+      { name: 'DSCR', value: dscr, ...scoreLookup(dscr, 1.25, 1.0) },
       {
         name: '1% Rule (All-In)',
         value: onePercentRule,
@@ -308,15 +181,9 @@ export class PropertyService {
     ];
 
     const totalScore = breakdown.reduce((sum, i) => sum + i.score, 0);
-
     const rating =
-      totalScore >= 40
-        ? 'GOOD DEAL'
-        : totalScore >= 25
-          ? 'AVERAGE DEAL'
-          : 'BAD DEAL';
+      totalScore >= 40 ? 'GOOD DEAL' : totalScore >= 25 ? 'AVERAGE DEAL' : 'BAD DEAL';
 
-    // ---------------- FINAL ----------------
     return {
       strategy: 'BRRRR',
       stateAddress: dto.stateAddress,
@@ -329,208 +196,78 @@ export class PropertyService {
       managementRate: dto.managementRate,
       capexRate: dto.capexRate,
 
-      // KeyMetrics
+      // ── BRRRR-Specific Key Metrics ──
       allInCost_m: allInCost,
       initialCashInvested_m: initialCashInvested,
-      monthlyCashFlow_m: monthlyCashFlow,
-      postRefiCoC_m: postRefiCoC,
-      cashOutAmount_m: cashOut,
-      cashLeftInDeal_m: cashLeftInDeal,
-      equityCaptured_m: equityCaptured,
-      refinanceLoanAmount_m: refinanceLoanAmount,
-      capRate_m: capRate,
-      DSCR_m: dscr,
-      netOperatingIncome_m: noi,
+      monthlyCashFlow_m: Number(monthlyCashFlow.toFixed(2)),
+      postRefiCoC_m: Number(postRefiCoC.toFixed(2)),
+      cashOutAmount_m: Number(cashOut.toFixed(2)),
+      cashLeftInDeal_m: Number(cashLeftInDeal.toFixed(2)),
+      equityCaptured_m: Number(equityCaptured.toFixed(2)),
+      refinanceLoanAmount_m: Number(refinanceLoanAmount.toFixed(2)),
+      capRate_m: Number(capRate.toFixed(2)),
+      DSCR_m: Number(dscr.toFixed(2)),
+      netOperatingIncome_m: Number(noi.toFixed(2)),
+
       incomeExpance: {
-        income: {
-          monthlyRent: dto.monthlyRent,
-          annualRent,
-          effectiveIncome,
-        },
-        expenses: {
-          totalExpenses,
-        },
+        income: { monthlyRent: dto.monthlyRent, annualRent, effectiveIncome },
+        expenses: { totalExpenses },
         noi,
         mortgage: {
-          monthlyMortgage: refiMortgage,
-          annualMortgage: refiMortgage * 12,
+          monthlyMortgage: Number(refiMortgage.toFixed(2)),
+          annualMortgage: Number((refiMortgage * 12).toFixed(2)),
         },
         netCashFlow: {
-          monthly: monthlyCashFlow,
-          annual: annualCashFlow,
+          monthly: Number(monthlyCashFlow.toFixed(2)),
+          annual: Number(annualCashFlow.toFixed(2)),
         },
         financing: {
           purchaseLoanAmount: loanAmount,
-          refinanceLoanAmount,
+          refinanceLoanAmount: Number(refinanceLoanAmount.toFixed(2)),
           loanPointsCost,
         },
       },
-      dealScoreboard: {
-        totalScore,
-        rating,
-        breakdown,
-      },
+      dealScoreboard: { totalScore, rating, breakdown },
     };
   }
 
-  // async generateTurnkeyReport(dto: CreatePropertyDto) {
-  //   const allInCost =
-  //     dto.purchasePrice + dto.rehabCost + dto.closingCost + dto.holdingCost;
-  //   const initialCashInvested =
-  //     dto.downPayment + dto.rehabCost + dto.closingCost + dto.holdingCost;
-  //   const loanAmount = dto.purchasePrice - dto.downPayment;
-  //   const monthlyRate = dto.interestRate / 100 / 12;
-  //   const monthlyMortgage =
-  //     (loanAmount * monthlyRate) /
-  //     (1 - Math.pow(1 + monthlyRate, -(dto.loanTerm * 12)));
-
-  //   // Re-using standardized cash flow logic
-  //   const annualIncome = dto.monthlyRent * 12;
-  //   const effectiveIncome = annualIncome * (1 - dto.vacancyRate / 100);
-  //   const totalExpenses =
-  //     dto.annualPropertyTax +
-  //     dto.annualInsurance +
-  //     dto.annualUtilities +
-  //     dto.annualOtherExpense +
-  //     ((dto.maintenanceRate + dto.managementRate + dto.capexRate) / 100) *
-  //       effectiveIncome;
-
-  //   const noi = effectiveIncome - totalExpenses;
-  //   const monthlyCashFlow =
-  //     dto.monthlyRent - totalExpenses / 12 - monthlyMortgage;
-  //   const annualCashFlow = monthlyCashFlow * 12;
-
-  //   const coc =
-  //     initialCashInvested > 0
-  //       ? (annualCashFlow / initialCashInvested) * 100
-  //       : 0;
-  //   const capRate = (noi / dto.purchasePrice) * 100;
-  //   const dscr = monthlyMortgage * 12 > 0 ? noi / (monthlyMortgage * 12) : 0;
-  //   const onePercentRule = dto.monthlyRent >= allInCost * 0.01;
-
-  //   // Deterministic Scoring
-  //   const scoreLookup = (val, good, avg) => {
-  //     if (val >= good) return { score: 10, status: 'GOOD' };
-  //     if (val >= avg) return { score: 5, status: 'AVERAGE' };
-  //     return { score: 0, status: 'BAD' };
-  //   };
-
-  //   const breakdown = [
-  //     {
-  //       name: 'Cash Flow',
-  //       value: annualCashFlow,
-  //       ...scoreLookup(annualCashFlow, 3000, 1200),
-  //     },
-  //     { name: 'CoC Return', value: coc, ...scoreLookup(coc, 8, 5) },
-  //     { name: 'Cap Rate', value: capRate, ...scoreLookup(capRate, 8, 5) },
-  //     { name: 'DSCR', value: dscr, ...scoreLookup(dscr, 1.25, 1.0) },
-  //     {
-  //       name: '1% Rule (All-In)',
-  //       value: onePercentRule,
-  //       score: onePercentRule ? 10 : 0,
-  //       status: onePercentRule ? 'GOOD' : 'BAD',
-  //     },
-  //   ];
-
-  //   const totalScore = breakdown.reduce((sum, i) => sum + i.score, 0);
-
-  //   return {
-  //     strategy: 'TURNKEY',
-  //     stateAddress: dto.stateAddress,
-  //     purchasePrice: dto.purchasePrice,
-  //     downPayment: dto.downPayment,
-  //     annualInsurance: dto.annualInsurance,
-  //     annualPropertyTax: dto.annualPropertyTax,
-  //     vacancyRate: dto.vacancyRate,
-  //     maintenanceRate: dto.maintenanceRate,
-  //     managementRate: dto.managementRate,
-  //     capexRate: dto.capexRate,
-  //     responseData: {
-  //       KeyMetrics: {
-  //         allInCost,
-  //         initialCashInvested,
-  //         monthlyCashFlow: Number(monthlyCashFlow.toFixed(2)),
-  //         CashOnCashReturn: Number(coc.toFixed(2)),
-  //         capRate: Number(capRate.toFixed(2)),
-  //         DSCR: Number(dscr.toFixed(2)),
-  //         OnePercentRule: onePercentRule,
-  //         netOperatingIncome: Number((noi / 12).toFixed(0)),
-  //       },
-  //       incomeExpance: {
-  //         noi: Number(noi.toFixed(0)),
-  //         netCashFlow: {
-  //           monthly: Number(monthlyCashFlow.toFixed(2)),
-  //           annual: Number(annualCashFlow.toFixed(2)),
-  //         },
-  //         mortgage: { monthlyMortgage: Number(monthlyMortgage.toFixed(2)) },
-  //       },
-  //       dealScoreboard: {
-  //         totalScore,
-  //         rating:
-  //           totalScore >= 40
-  //             ? 'GOOD DEAL'
-  //             : totalScore >= 25
-  //               ? 'AVERAGE DEAL'
-  //               : 'BAD DEAL',
-  //         breakdown,
-  //       },
-  //     },
-  //   };
-  // }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TURNKEY CALCULATOR — No refinance logic
+  // ═══════════════════════════════════════════════════════════════════════════
 
   async generateTurnkeyReport(dto: CalculateTurnkeyPropertyDto) {
-    // ---------------- 1. Down Payment Logic ----------------
+    // ─── Down Payment ──────────────────────────────────────────────────────
     const downPayment =
       dto.downPayment ??
-      (dto.downPaymentPercent
-        ? (dto.purchasePrice * dto.downPaymentPercent) / 100
-        : 0);
+      (dto.downPaymentPercent ? (dto.purchasePrice * dto.downPaymentPercent) / 100 : 0);
 
-    // ---------------- 2. Financing Structure ----------------
+    // ─── Financing (Standard purchase loan — NO refinance) ────────────────
     const loanAmount = dto.purchasePrice - downPayment;
-
-    const loanPointsCost = dto.loanPoints
-      ? (loanAmount * dto.loanPoints) / 100
-      : 0;
-
+    const loanPointsCost = dto.loanPoints ? (loanAmount * dto.loanPoints) / 100 : 0;
     const lenderFees = dto.lenderFees || 0;
-
     const totalFinancingCost = loanPointsCost + lenderFees;
 
     const monthlyRate = dto.interestRate / 100 / 12;
     const totalPayments = dto.loanTerm * 12;
-
     const monthlyMortgage =
-      (loanAmount * monthlyRate) /
-      (1 - Math.pow(1 + monthlyRate, -totalPayments));
-
+      (loanAmount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -totalPayments));
     const annualMortgage = monthlyMortgage * 12;
 
-    // ---------------- 3. Investment ----------------
+    // ─── Investment ────────────────────────────────────────────────────────
     const allInCost =
-      dto.purchasePrice +
-      dto.rehabCost +
-      dto.closingCost +
-      dto.holdingCost +
-      totalFinancingCost;
-
+      dto.purchasePrice + dto.rehabCost + dto.closingCost + dto.holdingCost + totalFinancingCost;
     const initialCashInvested =
-      downPayment +
-      dto.rehabCost +
-      dto.closingCost +
-      dto.holdingCost +
-      totalFinancingCost;
+      downPayment + dto.rehabCost + dto.closingCost + dto.holdingCost + totalFinancingCost;
 
-    // ---------------- 4. Income ----------------
+    // ─── Income ────────────────────────────────────────────────────────────
     const annualRent = dto.monthlyRent * 12;
     const vacancyLoss = (dto.vacancyRate / 100) * annualRent;
     const effectiveIncome = annualRent - vacancyLoss;
 
-    // ---------------- 5. Expenses ----------------
+    // ─── Expenses ──────────────────────────────────────────────────────────
     const maintenance = (dto.maintenanceRate / 100) * effectiveIncome;
     const management = (dto.managementRate / 100) * effectiveIncome;
     const capex = (dto.capexRate / 100) * effectiveIncome;
-
     const totalExpenses =
       dto.annualPropertyTax +
       dto.annualInsurance +
@@ -540,35 +277,24 @@ export class PropertyService {
       management +
       capex;
 
-    // ---------------- 6. NOI ----------------
+    // ─── NOI & Cash Flow ───────────────────────────────────────────────────
     const noi = effectiveIncome - totalExpenses;
-
-    // ---------------- 7. Cash Flow ----------------
-    const monthlyCashFlow =
-      dto.monthlyRent - totalExpenses / 12 - monthlyMortgage;
-
+    const monthlyCashFlow = dto.monthlyRent - totalExpenses / 12 - monthlyMortgage;
     const annualCashFlow = monthlyCashFlow * 12;
 
-    // ---------------- 8. Metrics ----------------
-    const coc =
-      initialCashInvested > 0
-        ? (annualCashFlow / initialCashInvested) * 100
-        : 0;
-
+    // ─── Metrics ───────────────────────────────────────────────────────────
+    const coc = initialCashInvested > 0 ? (annualCashFlow / initialCashInvested) * 100 : 0;
     const capRate = (noi / dto.purchasePrice) * 100;
-
     const dscr = annualMortgage > 0 ? noi / annualMortgage : 0;
-
     const onePercentRule = dto.monthlyRent >= allInCost * 0.01;
 
-    // ---------------- 9. External Data (Mock Integration Layer) ----------------
+    // ─── Market Data (from enrichment API or manual input) ────────────────
     const marketRent = dto.marketRent ?? dto.monthlyRent;
     const section8Rent = dto.section8Rent ?? dto.monthlyRent * 0.9;
     const crimeScore = dto.crimeScore ?? 50;
-
     const rentVsMarket = dto.monthlyRent / marketRent;
 
-    // ---------------- 10. Scoring ----------------
+    // ─── Scoreboard ────────────────────────────────────────────────────────
     const scoreLookup = (val: number, good: number, avg: number) => {
       if (val >= good) return { score: 10, status: 'GOOD' };
       if (val >= avg) return { score: 5, status: 'AVERAGE' };
@@ -576,11 +302,7 @@ export class PropertyService {
     };
 
     const breakdown = [
-      {
-        name: 'Cash Flow',
-        value: annualCashFlow,
-        ...scoreLookup(annualCashFlow, 3000, 1200),
-      },
+      { name: 'Cash Flow', value: annualCashFlow, ...scoreLookup(annualCashFlow, 3000, 1200) },
       { name: 'CoC Return', value: coc, ...scoreLookup(coc, 8, 5) },
       { name: 'Cap Rate', value: capRate, ...scoreLookup(capRate, 8, 5) },
       { name: 'DSCR', value: dscr, ...scoreLookup(dscr, 1.25, 1.0) },
@@ -590,33 +312,19 @@ export class PropertyService {
         score: onePercentRule ? 10 : 0,
         status: onePercentRule ? 'GOOD' : 'BAD',
       },
-      {
-        name: 'Rent vs Market',
-        value: rentVsMarket,
-        ...scoreLookup(rentVsMarket, 1, 0.9),
-      },
-      {
-        name: 'Crime Score',
-        value: crimeScore,
-        ...scoreLookup(crimeScore, 70, 50),
-      },
+      { name: 'Rent vs Market', value: rentVsMarket, ...scoreLookup(rentVsMarket, 1, 0.9) },
+      { name: 'Crime Score', value: crimeScore, ...scoreLookup(crimeScore, 70, 50) },
     ];
 
     const totalScore = breakdown.reduce((sum, i) => sum + i.score, 0);
-
     const rating =
-      totalScore >= 40
-        ? 'GOOD DEAL'
-        : totalScore >= 25
-          ? 'AVERAGE DEAL'
-          : 'BAD DEAL';
+      totalScore >= 40 ? 'GOOD DEAL' : totalScore >= 25 ? 'AVERAGE DEAL' : 'BAD DEAL';
 
-    // ---------------- FINAL RESPONSE ----------------
     return {
       strategy: 'TURNKEY',
       stateAddress: dto.stateAddress,
       purchasePrice: dto.purchasePrice,
-      downPayment: dto.downPayment,
+      downPayment,
       annualInsurance: dto.annualInsurance,
       annualPropertyTax: dto.annualPropertyTax,
       vacancyRate: dto.vacancyRate,
@@ -630,7 +338,6 @@ export class PropertyService {
           loanAmount,
           loanPointsCost,
           lenderFees,
-
           monthlyCashFlow: Number(monthlyCashFlow.toFixed(2)),
           CashOnCashReturn: Number(coc.toFixed(2)),
           capRate: Number(capRate.toFixed(2)),
@@ -638,7 +345,6 @@ export class PropertyService {
           OnePercentRule: onePercentRule,
           netOperatingIncome: Number(noi.toFixed(0)),
         },
-
         incomeExpance: {
           noi: Number(noi.toFixed(0)),
           mortgage: {
@@ -650,105 +356,43 @@ export class PropertyService {
             annual: Number(annualCashFlow.toFixed(2)),
           },
         },
-
-        dealScoreboard: {
-          totalScore,
-          rating,
-          breakdown,
-        },
+        dealScoreboard: { totalScore, rating, breakdown },
       },
     };
   }
 
-  // async generateSection8_DSCR(dto: CreatePropertyDto) {
-  //   // Section 8 focuses primarily on DSCR and fixed income stability
-  //   const loanAmount = dto.purchasePrice - dto.downPayment;
-  //   const monthlyRate = dto.interestRate / 100 / 12;
-  //   const monthlyMortgage =
-  //     (loanAmount * monthlyRate) /
-  //     (1 - Math.pow(1 + monthlyRate, -(dto.loanTerm * 12)));
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 8 CALCULATOR — Clean rewrite, no refinance fields
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  //   const annualIncome = dto.monthlyRent * 12;
-  //   const effectiveIncome = annualIncome * (1 - dto.vacancyRate / 100);
-  //   const totalExpenses =
-  //     dto.annualPropertyTax +
-  //     dto.annualInsurance +
-  //     dto.annualUtilities +
-  //     dto.annualOtherExpense +
-  //     ((dto.maintenanceRate + dto.managementRate + dto.capexRate) / 100) *
-  //       effectiveIncome;
+  async calculateSection8(dto: CalculateSection8Dto) {
+    // ─── Down Payment (percent OR absolute) ───────────────────────────────
+    const downPayment =
+      dto.downPayment ?? (dto.purchasePrice * (dto.downPaymentPercent ?? 20)) / 100;
 
-  //   const noi = effectiveIncome - totalExpenses;
-  //   const dscr = monthlyMortgage * 12 > 0 ? noi / (monthlyMortgage * 12) : 0;
-  //   const monthlyCashFlow =
-  //     dto.monthlyRent - totalExpenses / 12 - monthlyMortgage;
+    const loanAmount = dto.purchasePrice - downPayment;
 
-  //   const dscrScore =
-  //     dscr >= 1.25
-  //       ? { score: 10, status: 'GOOD' }
-  //       : dscr >= 1.1
-  //         ? { score: 5, status: 'AVERAGE' }
-  //         : { score: 0, status: 'BAD' };
-
-  //   return {
-  //     strategy: 'SECTION_8',
-  //     stateAddress: dto.stateAddress,
-  //     purchasePrice: dto.purchasePrice,
-  //     downPayment: dto.downPayment,
-  //     annualInsurance: dto.annualInsurance,
-  //     annualPropertyTax: dto.annualPropertyTax,
-  //     vacancyRate: dto.vacancyRate,
-  //     maintenanceRate: dto.maintenanceRate,
-  //     managementRate: dto.managementRate,
-  //     capexRate: dto.capexRate,
-  //     responseData: {
-  //       KeyMetrics: {
-  //         DSCR: Number(dscr.toFixed(2)),
-  //         netOperatingIncome: Number(noi.toFixed(0)),
-  //         monthlyCashFlow: Number(monthlyCashFlow.toFixed(2)),
-  //       },
-  //       dealScoreboard: {
-  //         totalScore: dscrScore.score,
-  //         rating: dscrScore.status
-  //           ? dscrScore.status == 'GOOD'
-  //             ? 'GOOD DEAL'
-  //             : dscrScore.status == 'AVERAGE'
-  //               ? 'AVERAGE DEAL'
-  //               : 'BAD DEAL'
-  //           : 'BAD DEAL',
-  //         breakdown: [
-  //           { name: 'DSCR', value: Number(dscr.toFixed(2)), ...dscrScore },
-  //         ],
-  //       },
-  //     },
-  //   };
-  // }
-
-  async generateSection8_DSCR(dto: CreatePropertyDto) {
-    // ---------------- 1. LOAN ----------------
-    const loanAmount = dto.purchasePrice - dto.downPayment;
-
+    // ─── Standard Purchase Loan (NO Refinance) ────────────────────────────
     const monthlyRate = dto.interestRate / 100 / 12;
-
+    const totalPayments = dto.loanTerm * 12;
     const monthlyMortgage =
-      (loanAmount * monthlyRate) /
-      (1 - Math.pow(1 + monthlyRate, -(dto.loanTerm * 12)));
-
+      (loanAmount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -totalPayments));
     const annualDebtService = monthlyMortgage * 12;
 
-    // ---------------- 2. SECTION 8 RENT (CAPPED MODEL) ----------------
-    const hudCap = dto.monthlyRent * 1.05; // stable cap logic
-
-    const section8Rent = Math.min(dto.monthlyRent, hudCap);
+    // ─── HUD FMR Rent — use API value if provided, else fall back ─────────
+    // HUD FMR rent is the maximum the Section 8 voucher will cover.
+    // The actual rent must be at or below this cap to be Section 8 eligible.
+    const fmrRent = dto.hudFmrRent ?? dto.monthlyRent;
+    const section8Rent = Math.min(dto.monthlyRent, fmrRent * 1.1); // 110% FMR cap (HUD rule)
+    const hudCap = fmrRent * 1.1;
 
     const annualIncome = section8Rent * 12;
 
-    // Section 8 stability (government-backed)
+    // Section 8 stability factor — government-backed payments, very low vacancy
     const stabilityFactor = 0.98;
-
     const effectiveIncome = annualIncome * stabilityFactor;
 
-    // ---------------- 3. EXPENSES ----------------
+    // ─── Expenses ──────────────────────────────────────────────────────────
     const operatingExpenses =
       dto.annualPropertyTax +
       dto.annualInsurance +
@@ -759,33 +403,144 @@ export class PropertyService {
     const management = (dto.managementRate / 100) * effectiveIncome;
     const capex = (dto.capexRate / 100) * effectiveIncome;
 
-    // Section 8 compliance overhead
+    // Section 8 compliance overhead (annual inspection, paperwork, etc.)
     const complianceCost = 600;
 
-    const totalExpenses =
-      operatingExpenses + maintenance + management + capex + complianceCost;
+    const totalExpenses = operatingExpenses + maintenance + management + capex + complianceCost;
 
-    // ---------------- 4. NOI ----------------
+    // ─── NOI ───────────────────────────────────────────────────────────────
     const noi = effectiveIncome - totalExpenses;
 
-    // ---------------- 5. RISK ADJUSTED DSCR ----------------
-    const riskFactor = 1.05;
-
+    // ─── Risk-Adjusted DSCR (Section 8 specific) ──────────────────────────
+    const riskFactor = 1.05; // Slight premium for inspection risk
     const riskAdjustedNOI = noi * riskFactor;
+    const dscr = annualDebtService > 0 ? riskAdjustedNOI / annualDebtService : 0;
 
-    const dscr =
-      annualDebtService > 0 ? riskAdjustedNOI / annualDebtService : 0;
+    // ─── Cash Flow ─────────────────────────────────────────────────────────
+    const monthlyCashFlow = section8Rent - totalExpenses / 12 - monthlyMortgage;
+    const annualCashFlow = monthlyCashFlow * 12;
 
-    // ---------------- 6. CASH FLOW ----------------
+    // ─── Additional Metrics ────────────────────────────────────────────────
+    const initialCashInvested = downPayment;
+    const coc = initialCashInvested > 0 ? (annualCashFlow / initialCashInvested) * 100 : 0;
+    const capRate = (noi / dto.purchasePrice) * 100;
+    const onePercentRule = section8Rent >= dto.purchasePrice * 0.01;
+
+    // ─── Scoreboard ────────────────────────────────────────────────────────
+    const scoreLookup = (val: number, good: number, avg: number) => {
+      if (val >= good) return { score: 10, status: 'GOOD' };
+      if (val >= avg) return { score: 5, status: 'AVERAGE' };
+      return { score: 0, status: 'BAD' };
+    };
+
+    const breakdown = [
+      { name: 'DSCR', value: Number(dscr.toFixed(2)), ...scoreLookup(dscr, 1.25, 1.1) },
+      { name: 'Cash Flow', value: Number(annualCashFlow.toFixed(2)), ...scoreLookup(annualCashFlow, 3000, 1200) },
+      { name: 'Cap Rate', value: Number(capRate.toFixed(2)), ...scoreLookup(capRate, 8, 5) },
+      { name: 'CoC Return', value: Number(coc.toFixed(2)), ...scoreLookup(coc, 8, 5) },
+      {
+        name: '1% Rule',
+        value: onePercentRule,
+        score: onePercentRule ? 10 : 0,
+        status: onePercentRule ? 'GOOD' : 'BAD',
+      },
+    ];
+
+    const totalScore = breakdown.reduce((sum, i) => sum + i.score, 0);
+    const rating =
+      totalScore >= 40 ? 'GOOD DEAL' : totalScore >= 25 ? 'AVERAGE DEAL' : 'BAD DEAL';
+
+    return {
+      strategy: 'SECTION_8',
+      stateAddress: dto.stateAddress,
+      purchasePrice: dto.purchasePrice,
+      downPayment: Number(downPayment.toFixed(2)),
+      annualInsurance: dto.annualInsurance,
+      annualPropertyTax: dto.annualPropertyTax,
+      vacancyRate: dto.vacancyRate,
+      maintenanceRate: dto.maintenanceRate,
+      managementRate: dto.managementRate,
+      capexRate: dto.capexRate,
+      responseData: {
+        KeyMetrics: {
+          DSCR: Number(dscr.toFixed(2)),
+          netOperatingIncome: Number(noi.toFixed(0)),
+          monthlyCashFlow: Number(monthlyCashFlow.toFixed(2)),
+          annualCashFlow: Number(annualCashFlow.toFixed(2)),
+          capRate: Number(capRate.toFixed(2)),
+          CashOnCashReturn: Number(coc.toFixed(2)),
+          OnePercentRule: onePercentRule,
+
+          // Section 8 specific
+          section8Rent: Number(section8Rent.toFixed(0)),
+          hudFmrRent: Number(fmrRent.toFixed(0)),
+          hudCap: Number(hudCap.toFixed(0)),
+          stabilityFactor,
+          complianceCost,
+
+          // Financing
+          loanAmount: Number(loanAmount.toFixed(2)),
+          monthlyMortgage: Number(monthlyMortgage.toFixed(2)),
+          annualDebtService: Number(annualDebtService.toFixed(2)),
+        },
+        incomeExpance: {
+          income: {
+            section8Rent: Number(section8Rent.toFixed(2)),
+            annualIncome: Number(annualIncome.toFixed(2)),
+            effectiveIncome: Number(effectiveIncome.toFixed(2)),
+          },
+          expenses: { totalExpenses: Number(totalExpenses.toFixed(2)), complianceCost },
+          noi: Number(noi.toFixed(0)),
+          mortgage: {
+            monthlyMortgage: Number(monthlyMortgage.toFixed(2)),
+            annualDebtService: Number(annualDebtService.toFixed(2)),
+          },
+          netCashFlow: {
+            monthly: Number(monthlyCashFlow.toFixed(2)),
+            annual: Number(annualCashFlow.toFixed(2)),
+          },
+        },
+        dealScoreboard: { totalScore, rating, breakdown },
+      },
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LEGACY Section 8 endpoint (kept for backward compatibility)
+  // @deprecated — use calculateSection8() instead
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async generateSection8_DSCR(dto: CreatePropertyDto) {
+    const loanAmount = dto.purchasePrice - dto.downPayment;
+    const monthlyRate = dto.interestRate / 100 / 12;
+    const monthlyMortgage =
+      (loanAmount * monthlyRate) /
+      (1 - Math.pow(1 + monthlyRate, -(dto.loanTerm * 12)));
+    const annualDebtService = monthlyMortgage * 12;
+
+    const hudCap = dto.monthlyRent * 1.05;
+    const section8Rent = Math.min(dto.monthlyRent, hudCap);
+    const annualIncome = section8Rent * 12;
+    const stabilityFactor = 0.98;
+    const effectiveIncome = annualIncome * stabilityFactor;
+
+    const operatingExpenses =
+      dto.annualPropertyTax + dto.annualInsurance + dto.annualUtilities + dto.annualOtherExpense;
+    const maintenance = (dto.maintenanceRate / 100) * effectiveIncome;
+    const management = (dto.managementRate / 100) * effectiveIncome;
+    const capex = (dto.capexRate / 100) * effectiveIncome;
+    const complianceCost = 600;
+    const totalExpenses = operatingExpenses + maintenance + management + capex + complianceCost;
+
+    const noi = effectiveIncome - totalExpenses;
+    const riskFactor = 1.05;
+    const riskAdjustedNOI = noi * riskFactor;
+    const dscr = annualDebtService > 0 ? riskAdjustedNOI / annualDebtService : 0;
     const monthlyCashFlow = section8Rent - totalExpenses / 12 - monthlyMortgage;
 
-    // ---------------- 7. SCORING ----------------
     const score = dscr >= 1.25 ? 10 : dscr >= 1.1 ? 5 : 0;
+    const rating = dscr >= 1.25 ? 'GOOD DEAL' : dscr >= 1.1 ? 'AVERAGE DEAL' : 'BAD DEAL';
 
-    const rating =
-      dscr >= 1.25 ? 'GOOD DEAL' : dscr >= 1.1 ? 'AVERAGE DEAL' : 'BAD DEAL';
-
-    // ---------------- FINAL RESPONSE ----------------
     return {
       strategy: 'SECTION_8',
       stateAddress: dto.stateAddress,
@@ -801,12 +556,10 @@ export class PropertyService {
           DSCR: Number(dscr.toFixed(2)),
           netOperatingIncome: Number(noi.toFixed(0)),
           monthlyCashFlow: Number(monthlyCashFlow.toFixed(2)),
-
           section8Rent: Number(section8Rent.toFixed(0)),
           hudCap: Number(hudCap.toFixed(0)),
           stabilityFactor,
         },
-
         dealScoreboard: {
           totalScore: score,
           rating,
@@ -823,67 +576,50 @@ export class PropertyService {
     };
   }
 
-  async getAllCalculationsForUser(
-    userId: string,
-    page: number = 1,
-    limit: number = 10,
-  ) {
-    // ensure valid values
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DATABASE CRUD
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getAllCalculationsForUser(userId: string, page: number = 1, limit: number = 10) {
     const currentPage = Number(page) || 1;
     const perPage = Number(limit) || 10;
-
     const skip = (currentPage - 1) * perPage;
 
-    // total count (VERY IMPORTANT)
-    const total = await this.prisma.propertyCalculation.count({
-      where: { userId: userId },
-    });
-
-    // fetch paginated data
+    const total = await this.prisma.propertyCalculation.count({ where: { userId } });
     const records = await this.prisma.propertyCalculation.findMany({
-      where: { userId: userId },
+      where: { userId },
       include: { breakdown: true },
       skip,
       take: perPage,
-      orderBy: {
-        createdAt: 'desc', // optional but recommended
-      },
+      orderBy: { createdAt: 'desc' },
     });
-
-    // total pages calculation
-    const totalPages = Math.ceil(total / perPage);
 
     return {
       data: records,
-      meta: {
-        total,
-        page: currentPage,
-        limit: perPage,
-        totalPages,
-      },
+      meta: { total, page: currentPage, limit: perPage, totalPages: Math.ceil(total / perPage) },
     };
   }
 
   async getCalculationById(propertyId: string) {
-    return await this.prisma.propertyCalculation.findUnique({
+    const record = await this.prisma.propertyCalculation.findUnique({
       where: { propertyId },
       include: { breakdown: true },
     });
+    if (!record) throw new NotFoundException(`Calculation ${propertyId} not found`);
+    return record;
   }
 
   async deleteCalculationById(propertyId: string, userId: string) {
     const record = await this.prisma.propertyCalculation.findUnique({
-      where: { propertyId: propertyId },
-    });
-
-    if (!record || record.userId !== userId) {
-      throw new Error('You are not authorized to delete this record.');
-    }
-
-    return await this.prisma.propertyCalculation.delete({
       where: { propertyId },
     });
+    if (!record || record.userId !== userId) {
+      throw new NotFoundException('Record not found or you are not authorized to delete it.');
+    }
+    return this.prisma.propertyCalculation.delete({ where: { propertyId } });
   }
+
+  // ─── Save BRRRR ────────────────────────────────────────────────────────────
 
   async saveBrrrProperty(userId: string, dto: CreateBrrrrDto) {
     const property = await this.prisma.propertyCalculation.create({
@@ -910,7 +646,7 @@ export class PropertyService {
         capRate: dto.capRate_m,
         netOperatingIncome: dto.netOperatingIncome_m,
         dscr: dto.DSCR_m,
-        userId: userId,
+        userId,
         monthlyRent: dto.incomeExpance.income.monthlyRent,
         annualRent: dto.incomeExpance.income.annualRent,
         effectiveIncome: dto.incomeExpance.income.effectiveIncome,
@@ -931,21 +667,19 @@ export class PropertyService {
         data: dto.dealScoreboard.breakdown.map((item: any) => ({
           propertyId: property.propertyId,
           name: item.name,
-          value:
-            typeof item.value === 'boolean' ? (item.value ? 1 : 0) : item.value,
+          value: typeof item.value === 'boolean' ? (item.value ? 1 : 0) : item.value,
           score: item.score,
           status: item.status,
         })),
       });
     }
 
-    return {
-      message: 'Property saved successfully',
-      data: property,
-    };
+    return { message: 'BRRRR Property saved successfully', data: property };
   }
 
-  async saveTurnkeyProperty(userId: string, dto: CreateTurkenyDTO_Mod) {
+  // ─── Save Turnkey ──────────────────────────────────────────────────────────
+
+  async saveTurnkeyProperty(userId: string, dto: CreateTurnkeyDTO_Mod) {
     const property = await this.prisma.propertyCalculation.create({
       data: {
         strategy: 'TURNKEY',
@@ -959,7 +693,7 @@ export class PropertyService {
         maintenanceRate: dto.maintenanceRate,
         managementRate: dto.managementRate,
         capexRate: dto.capexRate,
-        userId: userId,
+        userId,
         allInCost: dto.responseData.KeyMetrics.allInCost,
         initialCashInvested: dto.responseData.KeyMetrics.initialCashInvested,
         monthlyNetCashFlow: dto.responseData.KeyMetrics.monthlyCashFlow,
@@ -969,8 +703,7 @@ export class PropertyService {
         onePercentRule: dto.responseData.KeyMetrics.OnePercentRule,
         netOperatingIncome: dto.responseData.KeyMetrics.netOperatingIncome,
         noi: dto.responseData.incomeExpance.noi,
-        monthlyMortgage:
-          dto.responseData.incomeExpance.mortgage.monthlyMortgage,
+        monthlyMortgage: dto.responseData.incomeExpance.mortgage.monthlyMortgage,
         annualNetCashFlow: dto.responseData.incomeExpance.netCashFlow.annual,
         scoreBoardStatus: dto.responseData.dealScoreboard.rating,
         totalScore: dto.responseData.dealScoreboard.totalScore,
@@ -982,18 +715,17 @@ export class PropertyService {
         data: dto.responseData.dealScoreboard.breakdown.map((item: any) => ({
           propertyId: property.propertyId,
           name: item.name,
-          value:
-            typeof item.value === 'boolean' ? (item.value ? 1 : 0) : item.value,
+          value: typeof item.value === 'boolean' ? (item.value ? 1 : 0) : item.value,
           score: item.score,
           status: item.status,
         })),
       });
     }
-    return {
-      message: 'Turnkey Property saved successfully',
-      data: property,
-    };
+
+    return { message: 'Turnkey Property saved successfully', data: property };
   }
+
+  // ─── Save Section 8 ────────────────────────────────────────────────────────
 
   async saveSection8Property(userId: string, dto: Section8RequestDto) {
     const property = await this.prisma.propertyCalculation.create({
@@ -1009,7 +741,7 @@ export class PropertyService {
         maintenanceRate: dto.maintenanceRate,
         managementRate: dto.managementRate,
         capexRate: dto.capexRate,
-        userId: userId,
+        userId,
         dscr: dto.responseData.KeyMetrics.DSCR,
         netOperatingIncome: dto.responseData.KeyMetrics.netOperatingIncome,
         monthlyNetCashFlow: dto.responseData.KeyMetrics.monthlyCashFlow,
@@ -1023,18 +755,13 @@ export class PropertyService {
         data: dto.responseData.dealScoreboard.breakdown.map((item: any) => ({
           propertyId: property.propertyId,
           name: item.name,
-          value:
-            typeof item.value === 'boolean' ? (item.value ? 1 : 0) : item.value,
+          value: typeof item.value === 'boolean' ? (item.value ? 1 : 0) : item.value,
           score: item.score,
           status: item.status,
         })),
       });
     }
 
-    // ✅ 4. Return response
-    return {
-      message: 'Section 8 Property saved successfully',
-      data: property
-    };
+    return { message: 'Section 8 Property saved successfully', data: property };
   }
 }
