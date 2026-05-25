@@ -24,8 +24,8 @@ const OFFENSE_LABEL_MAP: Record<string, string> = {
   'property-crime': 'Property Crime (Total)',
 };
 
-/** FBI Crime Data API base URL (requires api.data.gov key) */
-const FBI_BASE_URL = 'https://api.usa.gov/crime/fbi/cde';
+/** FBI Crime Data API base URL (updated to sapi) */
+const FBI_BASE_URL = 'https://api.usa.gov/crime/fbi/sapi/api';
 
 @Injectable()
 export class ExternalApisService {
@@ -34,7 +34,7 @@ export class ExternalApisService {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. GOOGLE GEOCODING
@@ -207,41 +207,41 @@ export class ExternalApisService {
       const rentalComps: RentalComp[] =
         rentalRes.status === 'fulfilled'
           ? (rentalRes.value.data || []).map((p: any): RentalComp => ({
-              id: p.id || '',
-              address: p.formattedAddress || p.addressLine1 || '',
-              city: p.city || '',
-              state: p.state || '',
-              zipCode: p.zipCode || '',
-              bedrooms: p.bedrooms || 0,
-              bathrooms: p.bathrooms || 0,
-              squareFootage: p.squareFootage,
-              rent: p.price || p.rent || 0,
-              distance: p.distance,
-              listedDate: p.listedDate,
-              propertyType: p.propertyType,
-              photoUrl: p.photoUrl ?? undefined,
-            }))
+            id: p.id || '',
+            address: p.formattedAddress || p.addressLine1 || '',
+            city: p.city || '',
+            state: p.state || '',
+            zipCode: p.zipCode || '',
+            bedrooms: p.bedrooms || 0,
+            bathrooms: p.bathrooms || 0,
+            squareFootage: p.squareFootage,
+            rent: p.price || p.rent || 0,
+            distance: p.distance,
+            listedDate: p.listedDate,
+            propertyType: p.propertyType,
+            photoUrl: p.photoUrl ?? undefined,
+          }))
           : [];
 
       const soldComps: SoldComp[] =
         soldRes.status === 'fulfilled'
           ? (soldRes.value.data || []).map((p: any): SoldComp => ({
-              id: p.id || '',
-              address: p.formattedAddress || p.addressLine1 || '',
-              city: p.city || '',
-              state: p.state || '',
-              zipCode: p.zipCode || '',
-              bedrooms: p.bedrooms || 0,
-              bathrooms: p.bathrooms || 0,
-              squareFootage: p.squareFootage,
-              price: p.price || 0,
-              pricePerSqFt:
-                p.price && p.squareFootage ? Math.round(p.price / p.squareFootage) : undefined,
-              soldDate: p.listedDate || p.soldDate,
-              distance: p.distance,
-              propertyType: p.propertyType,
-              photoUrl: p.photoUrl ?? undefined,
-            }))
+            id: p.id || '',
+            address: p.formattedAddress || p.addressLine1 || '',
+            city: p.city || '',
+            state: p.state || '',
+            zipCode: p.zipCode || '',
+            bedrooms: p.bedrooms || 0,
+            bathrooms: p.bathrooms || 0,
+            squareFootage: p.squareFootage,
+            price: p.price || 0,
+            pricePerSqFt:
+              p.price && p.squareFootage ? Math.round(p.price / p.squareFootage) : undefined,
+            soldDate: p.listedDate || p.soldDate,
+            distance: p.distance,
+            propertyType: p.propertyType,
+            photoUrl: p.photoUrl ?? undefined,
+          }))
           : [];
 
       const estimate =
