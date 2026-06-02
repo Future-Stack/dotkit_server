@@ -3,6 +3,7 @@ export interface GeocodeResult {
   latitude: number;
   longitude: number;
   city: string;
+  county?: string;
   state: string;
   zipCode: string;
 }

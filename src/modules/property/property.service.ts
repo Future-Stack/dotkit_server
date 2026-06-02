@@ -18,24 +18,16 @@ export class PropertyService {
   constructor(
     private prisma: PrismaService,
     private externalApis: ExternalApisService,
-  ) {}
+  ) { }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ADDRESS ENRICHMENT — One address → full property intelligence
-  // ═══════════════════════════════════════════════════════════════════════════
 
-  /**
-   * Geocode an address and trigger all enrichment APIs in parallel.
-   * Returns a structured object ready for the frontend to display and feed
-   * back into the calculator endpoints.
-   */
   async enrichAddress(address: string) {
     // Step 1: Geocode to extract structured location data
     const geocode: GeocodeResult = await this.externalApis.geocodeAddress(address);
 
     // Step 2: All enrichment APIs fire in parallel — none blocks the others
     const [fmr, comps, crime] = await Promise.allSettled([
-      this.externalApis.getFmrByZipCode(geocode.zipCode),
+      this.externalApis.getFmrData(geocode.state, geocode.county, geocode.city),
       this.externalApis.getRentalAndSoldComps(
         geocode.latitude,
         geocode.longitude,
@@ -57,17 +49,17 @@ export class PropertyService {
       geocode,
       fmr: fmrData
         ? {
-            county: fmrData.county,
-            state: fmrData.state,
-            year: fmrData.year,
-            rents: {
-              studio: fmrData.studio,
-              oneBedroom: fmrData.oneBedroom,
-              twoBedroom: fmrData.twoBedroom,
-              threeBedroom: fmrData.threeBedroom,
-              fourBedroom: fmrData.fourBedroom,
-            },
-          }
+          county: fmrData.county,
+          state: fmrData.state,
+          year: fmrData.year,
+          rents: {
+            studio: fmrData.studio,
+            oneBedroom: fmrData.oneBedroom,
+            twoBedroom: fmrData.twoBedroom,
+            threeBedroom: fmrData.threeBedroom,
+            fourBedroom: fmrData.fourBedroom,
+          },
+        }
         : null,
       comps: {
         rental: compsData.rental,
