@@ -6,4 +6,5 @@ export interface GeocodeResult {
   county?: string;
   state: string;
   zipCode: string;
+  propertyPhoto?: string | null;
 }

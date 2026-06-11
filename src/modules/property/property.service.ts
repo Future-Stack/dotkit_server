@@ -46,6 +46,7 @@ export class PropertyService {
         : { crimeScore: 0, riskLabel: 'UNKNOWN', totalIncidents: 0, crimesByType: [], dataSource: 'UNKNOWN', incidents: [] };
 
     return {
+      propertyPhoto: geocode.propertyPhoto ?? null,
       geocode,
       fmr: fmrData
         ? {
