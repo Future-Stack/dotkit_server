@@ -15,9 +15,9 @@ export class CreateTurnkeyDTO_Mod {
   strategy!: StrategyType;
 
   @ApiProperty({ example: 'Property Name' })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  name!: string;
+  name?: string;
 
   @ApiProperty({ example: '123 Main St, Los Angeles, CA' })
   @IsString()

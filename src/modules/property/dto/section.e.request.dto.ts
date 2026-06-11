@@ -92,9 +92,9 @@ export class Section8RequestDto {
   strategy!: string;
 
   @ApiProperty({ example: 'Property Name' })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  name!: string;
+  name?: string;
 
   @ApiProperty({ example: '123 Main St, Los Angeles, CA' })
   @IsString()
@@ -140,8 +140,7 @@ export class Section8RequestDto {
   @IsOptional()
   capexRate?: number;
 
-  @ApiProperty({ type: MandyType })
-  @ValidateNested()
-  @Type(() => MandyType)
-  responseData!: MandyType;
+  @ApiProperty()
+  @IsOptional()
+  responseData?: any;
 }

@@ -6,6 +6,7 @@ import {
   IsArray,
   ValidateNested,
   IsNotEmpty,
+  IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -143,9 +144,9 @@ export class CreateBrrrrDto {
   strategy!: string;
 
   @ApiProperty({ example: 'Property Name' })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  name!: string;
+  name?: string;
 
   @ApiProperty({ example: '123 Main St' })
   @IsString()
