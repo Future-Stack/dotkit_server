@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  app:
+    image: mahdijihad001/dotkit_server:latest
+    build: .
+    container_name: dotkit_server_app
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: dotkit_server_db
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5432:5432" # You can change this to 5433:5432 if you already have postgres running on the VPS
+    volumes:
+      - dotkit_pg_data:/var/lib/postgresql/data
+
+volumes:
+  dotkit_pg_data:

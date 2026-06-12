@@ -52,15 +52,15 @@ model PropertyCalculation {
   initialCashInvested Decimal? @db.Decimal(12, 2)
   monthlyNetCashFlow  Decimal? @db.Decimal(12, 2)
   postRefiCoC         Decimal? @db.Decimal(12, 2)
-  cashOutAmount       Decimal?  @db.Decimal(12, 2)
-  cashLeftInDeal      Decimal?  @db.Decimal(12, 2)
-  equityCaptured      Decimal?  @db.Decimal(12, 2)
+  cashOutAmount       Decimal? @db.Decimal(12, 2)
+  cashLeftInDeal      Decimal? @db.Decimal(12, 2)
+  equityCaptured      Decimal? @db.Decimal(12, 2)
   cashOnCashReturn    Float?
   stabilityFactor     Float?
   capRate             Float?
   dscr                Float?
   onePercentRule      Boolean?
-  hudCap              Decimal?  @db.Decimal(10, 2)
+  hudCap              Decimal? @db.Decimal(10, 2)
   netOperatingIncome  Decimal? @db.Decimal(12, 2)
 
   // --- INCOME / RENT ---
@@ -112,22 +112,22 @@ model PropertyCalculation {
   zipCode          String?
 
   // --- HUD FMR DATA ---
-  fmrStudio     Decimal? @db.Decimal(10, 2)
-  fmrOneBed     Decimal? @db.Decimal(10, 2)
-  fmrTwoBed     Decimal? @db.Decimal(10, 2)
-  fmrThreeBed   Decimal? @db.Decimal(10, 2)
-  fmrFourBed    Decimal? @db.Decimal(10, 2)
+  fmrStudio   Decimal? @db.Decimal(10, 2)
+  fmrOneBed   Decimal? @db.Decimal(10, 2)
+  fmrTwoBed   Decimal? @db.Decimal(10, 2)
+  fmrThreeBed Decimal? @db.Decimal(10, 2)
+  fmrFourBed  Decimal? @db.Decimal(10, 2)
 
   // --- CRIME DATA (FBI Crime Data API) ---
   crimeScore     Float?
-  crimeRiskLabel String?   // "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN"
-  crimeAreaName  String?   // Resolved county/city name from FBI (e.g. "Jefferson County, AL")
-  crimeIncidents Json?     // FBI offense-type breakdown: [{ type, count, percentage }]
+  crimeRiskLabel String? // "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN"
+  crimeAreaName  String? // Resolved county/city name from FBI (e.g. "Jefferson County, AL")
+  crimeIncidents Json? // FBI offense-type breakdown: [{ type, count, percentage }]
 
   // --- COMPS (RentCast) ---
-  rentalComps Json? // array of RentalComp objects
-  soldComps   Json? // array of SoldComp objects
-  rentEstimate Decimal? @db.Decimal(10, 2)
+  rentalComps   Json? // array of RentalComp objects
+  soldComps     Json? // array of SoldComp objects
+  rentEstimate  Decimal? @db.Decimal(10, 2)
   valueEstimate Decimal? @db.Decimal(12, 2)
 
   // --- RELATIONS ---
