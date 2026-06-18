@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  app:
+    image: mahdijihad001/dotkit_server:latest
+    build: .
+    container_name: dotkit_server_app
+    restart: always
+    # ports:
+    #   - "3000:3000" # Commented out so traffic only goes through Nginx on ports 80/443
+    env_file:
+      - .env
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      - db
+
+  frontend:
+    image: mahdijihad001/dericktill-frontend:latest
+    container_name: dericktill_frontend
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    container_name: dotkit_server_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - app
+      - frontend
+
+  certbot:
+    image: certbot/certbot
+    container_name: dotkit_server_certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+  db:
+    image: postgres:15-alpine
+    container_name: dotkit_server_db
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5432:5432" # You can change this to 5433:5432 if you already have postgres running on the VPS
+    volumes:
+      - dotkit_pg_data:/var/lib/postgresql/data
+
+volumes:
+  dotkit_pg_data:

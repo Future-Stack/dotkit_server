@@ -1,0 +1,179 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  userId         String        @id @default(uuid())
+  name           String
+  email          String        @unique
+  phone          String        @unique
+  password       String
+  role           Role          @default(USER)
+  profile        String?
+  otp            String?
+  refreshToken   String?
+  isNotification Boolean       @default(true)
+  isAgree        Boolean       @default(false)
+  verifidStatus  verifidStatus @default(REQUEST)
+
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  propertyCalculations PropertyCalculation[]
+
+  @@map("users")
+}
+
+//purchasePrice downPayment annualInsurance annualPropertyTax 
+// vacancyRate maintenanceRate managementRate capexRate 
+// monthlyCashFlow cashOnCashReturn annualNoi allInCost dscr onePercentRule netOperatingIncome 
+// monthlyRent annualRent effectiveIncome 
+// totalExpenses noi 
+// mortgage 
+
+model PropertyCalculation {
+  name         String?
+  propertyId   String       @id @default(uuid())
+  strategy     StrategyType
+  stateAddress String
+  userId       String
+
+  // --- KEY METRICS ---
+  allInCost           Decimal? @db.Decimal(12, 2)
+  initialCashInvested Decimal? @db.Decimal(12, 2)
+  monthlyNetCashFlow  Decimal? @db.Decimal(12, 2)
+  postRefiCoC         Decimal? @db.Decimal(12, 2)
+  cashOutAmount       Decimal? @db.Decimal(12, 2)
+  cashLeftInDeal      Decimal? @db.Decimal(12, 2)
+  equityCaptured      Decimal? @db.Decimal(12, 2)
+  cashOnCashReturn    Float?
+  stabilityFactor     Float?
+  capRate             Float?
+  dscr                Float?
+  onePercentRule      Boolean?
+  hudCap              Decimal? @db.Decimal(10, 2)
+  netOperatingIncome  Decimal? @db.Decimal(12, 2)
+
+  // --- INCOME / RENT ---
+  monthlyRent     Decimal? @db.Decimal(12, 2)
+  annualRent      Decimal? @db.Decimal(12, 2)
+  effectiveIncome Decimal? @db.Decimal(12, 2)
+
+  // --- EXPENSE ---
+  totalExpenses Decimal? @db.Decimal(12, 2)
+  noi           Decimal? @db.Decimal(12, 2)
+
+  // --- LOAN / MORTGAGE ---
+  monthlyMortgage Decimal? @db.Decimal(12, 2)
+  annualMortgage  Decimal? @db.Decimal(12, 2)
+  mortgage        Decimal? @db.Decimal(12, 2)
+
+  // --- PROPERTY DETAILS ---
+  purchasePrice     Decimal? @db.Decimal(12, 2)
+  downPayment       Decimal? @db.Decimal(12, 2)
+  annualInsurance   Decimal? @db.Decimal(12, 2)
+  annualPropertyTax Decimal? @db.Decimal(12, 2)
+
+  // --- ANNUAL SUMMARY ---
+  annualNoi         Decimal? @db.Decimal(12, 2)
+  annualNetCashFlow Decimal? @db.Decimal(12, 2)
+
+  // --- SCOREBOARD ---
+  totalScore       Int?
+  scoreBoardStatus String?
+
+  // --- RATE INPUTS  ---
+  vacancyRate     Float?
+  maintenanceRate Float?
+  managementRate  Float?
+  capexRate       Float?
+
+  // FINANCE
+  purchaseLoanAmount  Decimal? @db.Decimal(12, 2)
+  refinanceLoanAmount Decimal? @db.Decimal(12, 2)
+  loanPointsCost      Decimal? @db.Decimal(12, 2)
+  lenderFees          Decimal? @db.Decimal(12, 2)
+
+  // --- GEOCODE ---
+  latitude         Float?
+  longitude        Float?
+  formattedAddress String?
+  cityName         String?
+  stateName        String?
+  zipCode          String?
+
+  // --- HUD FMR DATA ---
+  fmrStudio   Decimal? @db.Decimal(10, 2)
+  fmrOneBed   Decimal? @db.Decimal(10, 2)
+  fmrTwoBed   Decimal? @db.Decimal(10, 2)
+  fmrThreeBed Decimal? @db.Decimal(10, 2)
+  fmrFourBed  Decimal? @db.Decimal(10, 2)
+
+  // --- CRIME DATA (FBI Crime Data API) ---
+  crimeScore     Float?
+  crimeRiskLabel String? // "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN"
+  crimeAreaName  String? // Resolved county/city name from FBI (e.g. "Jefferson County, AL")
+  crimeIncidents Json? // FBI offense-type breakdown: [{ type, count, percentage }]
+
+  // --- COMPS (RentCast) ---
+  rentalComps   Json? // array of RentalComp objects
+  soldComps     Json? // array of SoldComp objects
+  rentEstimate  Decimal? @db.Decimal(10, 2)
+  valueEstimate Decimal? @db.Decimal(12, 2)
+
+  // --- RELATIONS ---
+  user      User             @relation(fields: [userId], references: [userId])
+  breakdown ScoreBreakdown[]
+
+  createdAt DateTime @default(now())
+}
+
+model ScoreBreakdown {
+  scoreBreakdownId String              @id @default(uuid())
+  propertyId       String
+  calculation      PropertyCalculation @relation(fields: [propertyId], references: [propertyId], onDelete: Cascade)
+
+  name   String
+  value  Float
+  score  Int
+  status String
+}
+
+enum ExpenseType {
+  TAX
+  INSURANCE
+  MAINTENANCE
+  MANAGEMENT
+  VACANCY
+  UTILITIES
+  OTHER
+}
+
+enum StrategyType {
+  BRRRR
+  TURNKEY
+  SECTION_8
+}
+
+enum Role {
+  USER
+  ELEVATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum verifidStatus {
+  VERIFID
+  SUSPEND
+  DECLINT
+  REQUEST
+}

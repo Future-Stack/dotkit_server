@@ -1,0 +1,39 @@
+export const STATUS_CODE = {
+    SUCCESS: {
+        OK: 200,
+        CREATED: 201,
+        ACCEPTED: 202,
+        NO_CONTENT: 204
+    },
+
+    CLIENT_ERROR: {
+        BAD_REQUEST: 400,
+        UNAUTHORIZED: 401,
+        FORBIDDEN: 403,
+        NOT_FOUND: 404,
+        METHOD_NOT_ALLOWED: 405,
+        CONFLICT: 409,
+        UNPROCESSABLE_ENTITY: 422,
+        TOO_MANY_REQUESTS: 429
+    },
+
+    AUTH_OTP: {
+        INVALID_CREDENTIALS: 4001,
+        ACCOUNT_NOT_VERIFIED: 4002,
+        TOKEN_EXPIRED: 4003,
+        INVALID_TOKEN: 4004,
+
+        OTP_SENT: 4100,
+        OTP_VERIFIED: 4101,
+        OTP_EXPIRED: 4102,
+        OTP_INVALID: 4103,
+        OTP_FAILED: 4104,
+    },
+
+    SERVER_ERROR: {
+        INTERNAL_SERVER_ERROR: 500,
+        NOT_IMPLEMENTED: 501,
+        BAD_GATEWAY: 502,
+        SERVICE_UNAVAILABLE: 503
+    },
+};

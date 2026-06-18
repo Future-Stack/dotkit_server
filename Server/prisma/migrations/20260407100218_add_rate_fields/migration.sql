@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE "PropertyCalculation" ADD COLUMN     "annualInsurance" DECIMAL(12,2),
+ADD COLUMN     "annualPropertyTax" DECIMAL(12,2),
+ADD COLUMN     "annualRent" DECIMAL(12,2),
+ADD COLUMN     "capexRate" DOUBLE PRECISION,
+ADD COLUMN     "downPayment" DECIMAL(12,2),
+ADD COLUMN     "effectiveIncome" DECIMAL(12,2),
+ADD COLUMN     "maintenanceRate" DOUBLE PRECISION,
+ADD COLUMN     "managementRate" DOUBLE PRECISION,
+ADD COLUMN     "monthlyRent" DECIMAL(12,2),
+ADD COLUMN     "mortgage" DECIMAL(12,2),
+ADD COLUMN     "noi" DECIMAL(12,2),
+ADD COLUMN     "purchasePrice" DECIMAL(12,2),
+ADD COLUMN     "totalExpenses" DECIMAL(12,2),
+ADD COLUMN     "vacancyRate" DOUBLE PRECISION;

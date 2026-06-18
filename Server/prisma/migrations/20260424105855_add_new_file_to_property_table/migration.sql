@@ -1,0 +1,9 @@
+-- AlterTable
+ALTER TABLE "PropertyCalculation" ALTER COLUMN "cashLeftInDeal" DROP NOT NULL,
+ALTER COLUMN "cashOutAmount" DROP NOT NULL,
+ALTER COLUMN "equityCaptured" DROP NOT NULL,
+ALTER COLUMN "hudCap" DROP NOT NULL,
+ALTER COLUMN "lenderFees" DROP NOT NULL,
+ALTER COLUMN "loanPointsCost" DROP NOT NULL,
+ALTER COLUMN "purchaseLoanAmount" DROP NOT NULL,
+ALTER COLUMN "refinanceLoanAmount" DROP NOT NULL;
