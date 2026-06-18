@@ -92,8 +92,16 @@ export function setupRateLimiting(app: any, configService: ConfigService, nodeEn
 export function setupSecurity(app: any, configService: ConfigService, nodeEnv: string): void {
     app.use(helmet({ contentSecurityPolicy: nodeEnv === 'production' ? undefined : false }));
     app.enableCors({
-        origin: true,
-        credentials: true
+        origin: [
+            'https://feasiblerealestate.com',
+            'https://www.feasiblerealestate.com',
+            'http://localhost:5173',
+            'http://localhost:3000'
+        ],
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+        credentials: true,
+        allowedHeaders: 'Content-Type, Accept, Authorization, X-Requested-With',
+        optionsSuccessStatus: 204,
     });
 }
 
