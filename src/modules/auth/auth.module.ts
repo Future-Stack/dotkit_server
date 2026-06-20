@@ -8,6 +8,7 @@ import { PrismaModule } from "src/prisma/prisma.module";
 import { AtStrategy } from "./strategie/access-token.strategy";
 import { AuthController } from "./auth.controller";
 import { IEnv } from "src/config/env.config";
+import { MailService } from "./mail.service";
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { IEnv } from "src/config/env.config";
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AtStrategy],
+  providers: [AuthService, AtStrategy, MailService],
   exports: [AuthService],
 })
 export class AuthModule { }
