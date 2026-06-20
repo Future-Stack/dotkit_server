@@ -221,6 +221,10 @@ export class CreateBrrrrDto {
   @IsNumber()
   capRate_m!: number;
 
+  @ApiProperty({ example: 3.66 })
+  @IsNumber()
+  crimeScore!: number;
+
   @ApiProperty({ example: 0.61 })
   @IsNumber()
   DSCR_m!: number;

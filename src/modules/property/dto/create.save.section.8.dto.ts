@@ -84,6 +84,10 @@ export class CreateSaveSection8Dto {
   @IsString()
   strategy!: string;
 
+  @ApiProperty({ example: 3.66 })
+  @IsNumber()
+  crimeScore!: number;
+
   @ApiProperty({ type: ResponseDataDto })
   @ValidateNested()
   @Type(() => ResponseDataDto)

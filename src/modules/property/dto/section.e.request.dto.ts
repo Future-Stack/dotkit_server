@@ -125,6 +125,10 @@ export class Section8RequestDto {
   @IsOptional()
   vacancyRate?: number;
 
+  @ApiProperty({ example: 3.66 })
+  @IsNumber()
+  crimeScore!: number;
+
   @ApiProperty({ example: 0.1 })
   @IsNumber()
   @IsOptional()
