@@ -21,6 +21,12 @@ export class PropertyService {
   ) { }
 
 
+  async testHudSection8(address: string) {
+    const geocode = await this.externalApis.geocodeAddress(address);
+    const fmr = await this.externalApis.testHudSection8Fmr(geocode.latitude, geocode.longitude, geocode.county || '', geocode.state || '', geocode.zipCode);
+    return { geocode, fmr };
+  }
+
   async enrichAddress(address: string) {
     // Step 1: Geocode to extract structured location data
     const geocode: GeocodeResult = await this.externalApis.geocodeAddress(address);

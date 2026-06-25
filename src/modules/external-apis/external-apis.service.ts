@@ -176,6 +176,83 @@ export class ExternalApisService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // 2.1 TEST ENDPOINT LOGIC: HUD FMR via FIPS Code (Specifically for Section 8)
+  // ─────────────────────────────────────────────────────────────────────────────
+  async testHudSection8Fmr(latitude: number, longitude: number, county: string, state: string, zipCode?: string): Promise<any> {
+    const hudApiKey = this.configService.get<string>('HUD_API_TOKEN');
+    if (!hudApiKey) return { error: 'HUD_API_TOKEN not set' };
+
+    // 1. Get FIPS code
+    let fipsCode: string | null = null;
+    try {
+      const fccUrl = `https://geo.fcc.gov/api/census/block/find`;
+      const { data: fccData } = await firstValueFrom(
+        this.httpService.get(fccUrl, {
+          params: { latitude, longitude, format: 'json' },
+          timeout: 5000,
+        })
+      );
+      fipsCode = fccData?.County?.FIPS || null;
+    } catch (err: any) {
+      this.logger.error(`FCC API error for FIPS lookup: ${err.message}`);
+    }
+
+    if (!fipsCode) {
+      return { error: 'Failed to retrieve FIPS code from FCC API' };
+    }
+
+    // 2. Hit HUD FMR Data Endpoint
+    try {
+      const entityId = `${fipsCode}99999`;
+      const url = `https://www.huduser.gov/hudapi/public/fmr/data/${entityId}`;
+      const { data } = await firstValueFrom(
+        this.httpService.get(url, {
+          headers: { Authorization: `Bearer ${hudApiKey}` },
+          timeout: 5000,
+        })
+      );
+      console.log("FMR API CALLING", data);
+      if (data?.data?.basicdata) {
+        const bd = data.data.basicdata;
+        let targetData: any = null;
+
+        // If basicdata is an array (e.g., Small Area FMRs by zip code)
+        if (Array.isArray(bd)) {
+          if (zipCode) {
+            targetData = bd.find((item: any) => item.zip_code === zipCode);
+          }
+          // Fallback to MSA level or first item if zip not found
+          if (!targetData) {
+            targetData = bd.find((item: any) => item.zip_code === 'MSA level') || bd[0];
+          }
+        } else {
+          // It's a single object
+          targetData = bd;
+        }
+
+        if (targetData) {
+          return {
+            year: parseInt(targetData.year || data?.data?.year || new Date().getFullYear().toString(), 10),
+            county: data?.data?.county_name || data?.data?.metro_name || county || fipsCode,
+            state: state.toUpperCase(),
+            studio: parseFloat(targetData.Efficiency || '0'),
+            oneBedroom: parseFloat(targetData['One-Bedroom'] || targetData.OneBedroom || '0'),
+            twoBedroom: parseFloat(targetData['Two-Bedroom'] || targetData.TwoBedroom || '0'),
+            threeBedroom: parseFloat(targetData['Three-Bedroom'] || targetData.ThreeBedroom || '0'),
+            fourBedroom: parseFloat(targetData['Four-Bedroom'] || targetData.FourBedroom || '0'),
+            raw: { source: 'HUD API (FIPS endpoint)' },
+            diagnostics: { fipsCode, entityId, targetZip: zipCode, success: true }
+          };
+        }
+      }
+      return { error: 'No basicdata found in HUD response', rawResponse: data };
+    } catch (err: any) {
+      this.logger.error(`HUD FMR FIPS endpoint failed: ${err.message}`);
+      return { error: `HUD API Error for FIPS ${fipsCode}99999`, details: err.message };
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // 3. RENTCAST — Rental & Sold Comps
   // ─────────────────────────────────────────────────────────────────────────────
   async getRentalAndSoldComps(

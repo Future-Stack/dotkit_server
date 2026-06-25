@@ -47,6 +47,15 @@ export class PropertyController {
     return this.propertyService.enrichAddress(dto.address);
   }
 
+  @Post('test-hud-section8')
+  @ApiOperation({
+    summary: 'Test HUD FMR API specifically for Section 8',
+    description: 'Provide an address, it geocodes it, looks up the FIPS code, and fetches the precise HUD FMR data using the Section 8 logic.',
+  })
+  async testHudSection8(@Body() dto: EnrichAddressDto) {
+    return this.propertyService.testHudSection8(dto.address);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CALCULATORS
   // ═══════════════════════════════════════════════════════════════════════════
