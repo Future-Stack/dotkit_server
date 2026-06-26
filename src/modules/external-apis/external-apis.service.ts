@@ -212,6 +212,7 @@ export class ExternalApisService {
         })
       );
       console.log("FMR API CALLING", data);
+      console.log(data?.data?.basicdata);
       if (data?.data?.basicdata) {
         const bd = data.data.basicdata;
         let targetData: any = null;
@@ -240,6 +241,14 @@ export class ExternalApisService {
             twoBedroom: parseFloat(targetData['Two-Bedroom'] || targetData.TwoBedroom || '0'),
             threeBedroom: parseFloat(targetData['Three-Bedroom'] || targetData.ThreeBedroom || '0'),
             fourBedroom: parseFloat(targetData['Four-Bedroom'] || targetData.FourBedroom || '0'),
+            allZipCodeData: Array.isArray(bd) ? bd.map((item: any) => ({
+              zipCode: item.zip_code,
+              studio: parseFloat(item.Efficiency || '0'),
+              oneBedroom: parseFloat(item['One-Bedroom'] || item.OneBedroom || '0'),
+              twoBedroom: parseFloat(item['Two-Bedroom'] || item.TwoBedroom || '0'),
+              threeBedroom: parseFloat(item['Three-Bedroom'] || item.ThreeBedroom || '0'),
+              fourBedroom: parseFloat(item['Four-Bedroom'] || item.FourBedroom || '0'),
+            })) : [],
             raw: { source: 'HUD API (FIPS endpoint)' },
             diagnostics: { fipsCode, entityId, targetZip: zipCode, success: true }
           };
