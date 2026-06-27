@@ -25,7 +25,7 @@ import { EnrichAddressDto } from './dto/enrich-address.dto';
 @ApiTags('Property')
 @Controller('property')
 export class PropertyController {
-  constructor(private readonly propertyService: PropertyService) {}
+  constructor(private readonly propertyService: PropertyService) { }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ADDRESS ENRICHMENT
@@ -104,7 +104,7 @@ export class PropertyController {
     summary: '[DEPRECATED] Legacy Section 8 DSCR calculator',
     description:
       'Legacy endpoint — kept for backward compatibility. ' +
-      'Please migrate to POST /property/calculate-section8.',
+      'Please migrate to POST /property/calculate-section8. And',
     deprecated: true,
   })
   async generateSection8_DSCR(@Body() dto: CreatePropertyDto) {
