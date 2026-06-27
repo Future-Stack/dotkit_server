@@ -46,6 +46,8 @@ export interface IEnv {
         /** FBI Crime Data API key — obtain free at https://api.data.gov/signup/ */
         FBI_API_KEY?: string;
         HUD_API_TOKEN?: string;
+        WHOP_API_KEY?: string;
+        WHOP_WEBHOOK_SECRET?: string;
     }
 }
 
@@ -108,6 +110,8 @@ export default registerAs('env', (): IEnv => {
             RENTCAST_API_KEY: process.env.RENTCAST_API_KEY,
             FBI_API_KEY: process.env.FBI_API_KEY,
             HUD_API_TOKEN: process.env.HUD_API_TOKEN,
+            WHOP_API_KEY: process.env.WHOP_API_KEY,
+            WHOP_WEBHOOK_SECRET: process.env.WHOP_WEBHOOK_SECRET,
         }
     };
 });

@@ -90,10 +90,38 @@ export class AuthService {
 
         if (!isPasswordValid) throw new NotFoundException(ERROR_MESSAGES.AUTH.INVALID_PASSWORD);
 
-        const tokens = await this.generateTokens(user.userId, user.email);
+        
+        const maxSessions = Math.max(1, user.seatCount);
+        
+        const activeSessions = await this.prisma.session.findMany({
+            where: { userId: user.userId },
+            orderBy: { createdAt: 'asc' },
+        });
 
+        if (activeSessions.length >= maxSessions) {
+            const sessionsToDelete = activeSessions.length - maxSessions + 1;
+            const toDelete = activeSessions.slice(0, sessionsToDelete).map(s => s.id);
+            await this.prisma.session.deleteMany({
+                where: { id: { in: toDelete } },
+            });
+        }
+
+        const newSession = await this.prisma.session.create({
+            data: {
+                userId: user.userId,
+                token: 'pending',
+            }
+        });
+
+        const tokens = await this.generateTokens(user.userId, user.email, newSession.id);
+        const hashedRt = await bcrypt.hash(tokens.refreshToken, 10);
+        await this.prisma.session.update({
+            where: { id: newSession.id },
+            data: { token: hashedRt }
+        });
 
         await this.updateRefreshToken(user.userId, tokens.refreshToken);
+
 
         const { password, otp, refreshToken, ...rest } = user;
 
@@ -117,9 +145,9 @@ export class AuthService {
         return rest;
     }
 
-    async generateTokens(userId: string, email: string) {
+    async generateTokens(userId: string, email: string, sessionId: string) {
         const env = this.configService.get<IEnv>("env")
-        const payload = { sub: userId, email };
+        const payload = { sub: userId, email, sessionId };
 
         const accessToken = await this.jwtService.signAsync(payload, {
             secret: env?.JWT_CONFIG.JWT_SECRET,
@@ -166,20 +194,45 @@ export class AuthService {
             throw new ForbiddenException("Access denied");
         }
 
-        const tokens = await this.generateTokens(user.userId, user.email);
+        
+        const decoded = this.jwtService.decode(refreshToken) as any;
+        const sessionId = decoded?.sessionId;
+
+        if (!sessionId) {
+             throw new ForbiddenException("Invalid session");
+        }
+
+        const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
+        if (!session) {
+             throw new ForbiddenException("Session expired or revoked");
+        }
+
+        const tokens = await this.generateTokens(user.userId, user.email, sessionId);
+        const hashedRt = await bcrypt.hash(tokens.refreshToken, 10);
+        await this.prisma.session.update({
+            where: { id: sessionId },
+            data: { token: hashedRt }
+        });
 
         await this.updateRefreshToken(user.userId, tokens.refreshToken);
+
 
         return tokens;
     }
 
-    async logout(userId: string) {
+    async logout(userId: string, sessionId?: string) {
         await this.prisma.user.update({
             where: { userId: userId },
             data: {
                 refreshToken: null
             }
         });
+
+        if (sessionId) {
+            await this.prisma.session.delete({ where: { id: sessionId } }).catch(() => null);
+        } else {
+            await this.prisma.session.deleteMany({ where: { userId: userId } });
+        }
 
         return {
             message: "Logout successful"

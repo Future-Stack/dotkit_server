@@ -26,6 +26,13 @@ model User {
   isAgree        Boolean       @default(false)
   verifidStatus  verifidStatus @default(REQUEST)
 
+  whopUserId         String?             @unique
+  subscriptionTier   SubscriptionTier    @default(NONE)
+  subscriptionStatus SubscriptionStatus  @default(INACTIVE)
+  seatCount          Int                 @default(0)
+
+  sessions           Session[]
+
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   propertyCalculations PropertyCalculation[]
@@ -176,4 +183,29 @@ enum verifidStatus {
   SUSPEND
   DECLINT
   REQUEST
+}
+
+enum SubscriptionTier {
+  NONE
+  INDIVIDUAL
+  BUSINESS
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  PAST_DUE
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  token        String   @unique
+  deviceInfo   String?
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  @@index([userId])
 }

@@ -8,6 +8,7 @@ import { UserModule } from './modules/user/user.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { PropertyModule } from './modules/property/property.module';
+import { WhopModule } from './modules/whop/whop.module';
 import envConfig from './config/env.config';
 
 @Module({
@@ -21,7 +22,8 @@ import envConfig from './config/env.config';
     AuthModule,
     UserModule,
     CloudinaryModule,
-    PropertyModule
+    PropertyModule,
+    WhopModule
   ],
   controllers: [AppController],
   providers: [AppService],

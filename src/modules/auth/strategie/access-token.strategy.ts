@@ -45,6 +45,21 @@ export class AtStrategy extends PassportStrategy(JwtStrategy, "jwt") {
             throw new UnauthorizedException("Account suspended");
         }
 
+        if (!payload.sessionId) {
+            throw new UnauthorizedException("Invalid session token");
+        }
+
+        const session = await this.prisma.session.findUnique({
+            where: { id: payload.sessionId }
+        });
+
+        if (!session) {
+            throw new UnauthorizedException("Session expired or revoked");
+        }
+
+        // Enforce subscription check here or via a separate guard
+        // (If the subscription lapsed, the webhook will delete the session, so !session handles revocation automatically).
+
         return {
             userId: user.userId,
             email: user.email,
