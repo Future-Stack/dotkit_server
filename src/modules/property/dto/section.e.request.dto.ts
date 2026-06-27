@@ -144,6 +144,41 @@ export class Section8RequestDto {
   @IsOptional()
   capexRate?: number;
 
+  @ApiProperty({ example: 123456 })
+  @IsNumber()
+  @IsOptional()
+  latitude?: number;
+
+  @ApiProperty({ example: 123456 })
+  @IsNumber()
+  @IsOptional()
+  longitude?: number;
+
+  @ApiProperty({ example: 123456 })
+  @IsNumber()
+  @IsOptional()
+  fmrStudio?: number;
+
+  @ApiProperty({ example: 123456 })
+  @IsNumber()
+  @IsOptional()
+  fmrOneBed?: number;
+
+  @ApiProperty({ example: 123456 })
+  @IsNumber()
+  @IsOptional()
+  fmrTwoBed?: number;
+
+  @ApiProperty({ example: 123456 })
+  @IsNumber()
+  @IsOptional()
+  fmrThreeBed?: number;
+
+  @ApiProperty({ example: 123456 })
+  @IsNumber()
+  @IsOptional()
+  fmrFourBed?: number;
+
   @ApiProperty()
   @IsOptional()
   responseData?: any;

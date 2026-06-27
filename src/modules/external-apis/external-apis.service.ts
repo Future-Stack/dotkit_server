@@ -98,8 +98,7 @@ export class ExternalApisService {
           '',
         county: components['administrative_area_level_2'] || '',
         state: components['state_short'] || components['administrative_area_level_1'] || '',
-        zipCode: components['postal_code'] || '',
-        propertyPhoto: `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${result.geometry.location.lat},${result.geometry.location.lng}&key=${apiKey}`,
+        zipCode: components['postal_code'] || ''
       };
     } catch (err: any) {
       this.logger.error(`Geocode API error: ${err.message}`);

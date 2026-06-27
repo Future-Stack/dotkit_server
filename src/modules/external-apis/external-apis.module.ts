@@ -12,4 +12,4 @@ import { ExternalApisService } from './external-apis.service';
   providers: [ExternalApisService],
   exports: [ExternalApisService],
 })
-export class ExternalApisModule {}
+export class ExternalApisModule { }
