@@ -23,13 +23,12 @@ import { Section8RequestDto } from './dto/section.e.request.dto';
 import { EnrichAddressDto } from './dto/enrich-address.dto';
 
 @ApiTags('Property')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('property')
 export class PropertyController {
   constructor(private readonly propertyService: PropertyService) { }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ADDRESS ENRICHMENT
-  // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('enrich-address')
   @ApiOperation({
@@ -56,9 +55,6 @@ export class PropertyController {
     return this.propertyService.testHudSection8(dto.address);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CALCULATORS
-  // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('calculate-brrrr')
   @ApiOperation({
@@ -95,10 +91,7 @@ export class PropertyController {
     return this.propertyService.calculateSection8(dto);
   }
 
-  /**
-   * @deprecated Use POST /property/calculate-section8 instead.
-   * Kept for backward compatibility with existing clients.
-   */
+
   @Post('calculate-Section8_DSCR')
   @ApiOperation({
     summary: '[DEPRECATED] Legacy Section 8 DSCR calculator',
@@ -111,9 +104,7 @@ export class PropertyController {
     return this.propertyService.generateSection8_DSCR(dto);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // USER SAVED CALCULATIONS
-  // ═══════════════════════════════════════════════════════════════════════════
+
 
   @ApiBearerAuth()
   @Get('user-calculations')
@@ -155,9 +146,6 @@ export class PropertyController {
     return this.propertyService.deleteCalculationById(propertyId, userId);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // SAVE (persist calculation results)
-  // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('save-brrr-property')
   @ApiBearerAuth()
