@@ -91,10 +91,6 @@ export class PropertyService {
     };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // BRRRR CALCULATOR
-  // ═══════════════════════════════════════════════════════════════════════════
-
   async calculateBrrrr(dto: CalculateBrrrPropertyDto) {
     // ─── Down Payment ──────────────────────────────────────────────────────
     const downPayment =
@@ -230,9 +226,6 @@ export class PropertyService {
     };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // TURNKEY CALCULATOR — No refinance logic
-  // ═══════════════════════════════════════════════════════════════════════════
 
   async generateTurnkeyReport(dto: CalculateTurnkeyPropertyDto) {
     // ─── Down Payment ──────────────────────────────────────────────────────
@@ -360,9 +353,6 @@ export class PropertyService {
     };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // SECTION 8 CALCULATOR — Clean rewrite, no refinance fields
-  // ═══════════════════════════════════════════════════════════════════════════
 
   async calculateSection8(dto: CalculateSection8Dto) {
     // ─── Down Payment (percent OR absolute) ───────────────────────────────
@@ -504,10 +494,7 @@ export class PropertyService {
     };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LEGACY Section 8 endpoint (kept for backward compatibility)
-  // @deprecated — use calculateSection8() instead
-  // ═══════════════════════════════════════════════════════════════════════════
+
 
   async generateSection8_DSCR(dto: CreatePropertyDto) {
     const loanAmount = dto.purchasePrice - dto.downPayment;
@@ -575,9 +562,6 @@ export class PropertyService {
     };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // DATABASE CRUD
-  // ═══════════════════════════════════════════════════════════════════════════
 
   async getAllCalculationsForUser(userId: string, page: number = 1, limit: number = 10) {
     const currentPage = Number(page) || 1;
@@ -618,7 +602,6 @@ export class PropertyService {
     return this.prisma.propertyCalculation.delete({ where: { propertyId } });
   }
 
-  // ─── Save BRRRR ────────────────────────────────────────────────────────────
 
   async saveBrrrProperty(userId: string, dto: CreateBrrrrDto) {
     const property = await this.prisma.propertyCalculation.create({
@@ -677,7 +660,6 @@ export class PropertyService {
     return { message: 'BRRRR Property saved successfully', data: property };
   }
 
-  // ─── Save Turnkey ──────────────────────────────────────────────────────────
 
   async saveTurnkeyProperty(userId: string, dto: CreateTurnkeyDTO_Mod) {
     const property = await this.prisma.propertyCalculation.create({
@@ -729,7 +711,6 @@ export class PropertyService {
     return { message: 'Turnkey Property saved successfully', data: property };
   }
 
-  // ─── Save Section 8 ────────────────────────────────────────────────────────
 
   async saveSection8Property(userId: string, dto: Section8RequestDto) {
     const property = await this.prisma.propertyCalculation.create({
@@ -766,6 +747,14 @@ export class PropertyService {
         effectiveIncome: dto.responseData?.incomeExpance?.income?.effectiveIncome,
         scoreBoardStatus: dto.responseData?.dealScoreboard?.rating,
         totalScore: dto.responseData?.dealScoreboard?.totalScore,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        fmrStudio: dto.responseData?.KeyMetrics?.fmrStudio,
+        fmrOneBed: dto.responseData?.KeyMetrics?.fmrOneBed,
+        fmrTwoBed: dto.responseData?.KeyMetrics?.fmrTwoBed,
+        fmrThreeBed: dto.responseData?.KeyMetrics?.fmrThreeBed,
+        fmrFourBed: dto.responseData?.KeyMetrics?.fmrFourBed,
+
       },
     });
 
