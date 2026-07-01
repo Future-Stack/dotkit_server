@@ -126,9 +126,15 @@ export class CalculateBrrrPropertyDto {
   @IsNumber()
   refinanceCost!: number;
 
-  @ApiProperty({ example: 3000 })
+  @ApiProperty({ example: 3000, description: 'Monthly holding cost during rehab' })
   @IsNumber()
   holdingCost!: number;
+
+  @ApiProperty({ example: 3, description: 'Rehab duration in months' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  rehabDurationMonths?: number;
 
   @ApiProperty({ example: 2 })
   @IsNumber()

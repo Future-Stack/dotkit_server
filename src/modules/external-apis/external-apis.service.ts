@@ -500,13 +500,35 @@ export class ExternalApisService {
    */
   private computeCrimeScoreFromRate(per100k: number): number {
     if (per100k === 0) return 50; // No data — neutral
-    if (per100k <= 500) return 95;    // Very safe
-    if (per100k <= 1000) return 82;   // Safe
-    if (per100k <= 1800) return 68;   // Below average risk
-    if (per100k <= 2500) return 52;   // Near national average
-    if (per100k <= 3500) return 38;   // Above average risk
-    if (per100k <= 5000) return 22;   // High risk
-    return 10;                         // Very high risk
+
+    const thresholds = [
+      { rate: 0, score: 100 },
+      { rate: 500, score: 95 },
+      { rate: 1000, score: 82 },
+      { rate: 1800, score: 68 },
+      { rate: 2500, score: 52 },
+      { rate: 3500, score: 38 },
+      { rate: 5000, score: 22 },
+      { rate: 7000, score: 10 },
+      { rate: 10000, score: 0 }
+    ];
+
+    if (per100k >= thresholds[thresholds.length - 1].rate) {
+      return 0;
+    }
+
+    for (let i = 0; i < thresholds.length - 1; i++) {
+      const lower = thresholds[i];
+      const upper = thresholds[i + 1];
+
+      if (per100k >= lower.rate && per100k <= upper.rate) {
+        const fraction = (per100k - lower.rate) / (upper.rate - lower.rate);
+        const interpolated = lower.score + fraction * (upper.score - lower.score);
+        return Math.round(interpolated);
+      }
+    }
+
+    return 10; // Fallback
   }
 
   private crimeRiskLabel(score: number): CrimeRiskLabel {

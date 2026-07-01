@@ -157,14 +157,6 @@ export class CalculateTurnkeyPropertyDto {
 
   // ---------------- Market Data ----------------
   @ApiPropertyOptional({
-    example: 2100,
-    description: 'Average Market Rent (from rental comps)',
-  })
-  @IsOptional()
-  @IsNumber()
-  marketRent?: number;
-
-  @ApiPropertyOptional({
     example: 1800,
     description: 'Estimated Section 8 Rent',
   })

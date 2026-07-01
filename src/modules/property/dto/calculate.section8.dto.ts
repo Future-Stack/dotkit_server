@@ -140,4 +140,14 @@ export class CalculateSection8Dto {
   @Min(0)
   @Max(100)
   capexRate!: number;
+
+  // ─── Market Data ──────────────────────────────────────────────────────────────
+
+  @ApiPropertyOptional({
+    example: 70,
+    description: 'Crime Score (0-100, higher = safer area)',
+  })
+  @IsOptional()
+  @IsNumber()
+  crimeScore?: number;
 }
