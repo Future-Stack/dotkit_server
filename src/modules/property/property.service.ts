@@ -759,7 +759,6 @@ export class PropertyService {
 
   async saveSection8Property(userId: string, dto: Section8RequestDto) {
 
-    console.log("RAW DTO PAYLOAD:", JSON.stringify(dto, null, 2));
     console.log("Incoming DTO keys:", Object.keys(dto));
     console.log("FMR values at root:", {
       fmrStudio: dto.fmrStudio,
