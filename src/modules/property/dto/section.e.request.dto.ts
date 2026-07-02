@@ -43,8 +43,8 @@ class KdiType {
   name!: string;
 
   @ApiProperty({ example: 0.76 })
-  @IsNumber()
-  value!: number;
+  @IsOptional()
+  value!: any;
 
   @ApiProperty({ example: 0 })
   @IsNumber()
@@ -125,9 +125,10 @@ export class Section8RequestDto {
   @IsOptional()
   vacancyRate?: number;
 
-  @ApiProperty({ example: 3.66 })
+  @ApiProperty({ example: 3.66, required: false })
+  @IsOptional()
   @IsNumber()
-  crimeScore!: number;
+  crimeScore?: number;
 
   @ApiProperty({ example: 0.1 })
   @IsNumber()
