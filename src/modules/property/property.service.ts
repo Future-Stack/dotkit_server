@@ -177,8 +177,8 @@ export class PropertyService {
       {
         name: 'Crime Score',
         value: crimeScore,
-        score: Math.round((100 - crimeScore) / 10),
-        status: crimeScore <= 33 ? 'GOOD' : crimeScore <= 66 ? 'AVERAGE' : 'BAD',
+        score: Math.round(crimeScore / 10),
+        status: crimeScore >= 70 ? 'GOOD' : crimeScore >= 50 ? 'AVERAGE' : 'BAD',
       },
     ];
 
@@ -320,8 +320,8 @@ export class PropertyService {
       {
         name: 'Crime Score',
         value: crimeScore,
-        score: Math.round((100 - crimeScore) / 10),
-        status: crimeScore <= 33 ? 'GOOD' : crimeScore <= 66 ? 'AVERAGE' : 'BAD',
+        score: Math.round(crimeScore / 10),
+        status: crimeScore >= 70 ? 'GOOD' : crimeScore >= 50 ? 'AVERAGE' : 'BAD',
       },
     ];
 
@@ -466,8 +466,8 @@ export class PropertyService {
       {
         name: 'Crime Score',
         value: crimeScore,
-        score: Math.round((100 - crimeScore) / 10),
-        status: crimeScore <= 33 ? 'GOOD' : crimeScore <= 66 ? 'AVERAGE' : 'BAD',
+        score: Math.round(crimeScore / 10),
+        status: crimeScore >= 70 ? 'GOOD' : crimeScore >= 50 ? 'AVERAGE' : 'BAD',
       },
     ];
 
@@ -672,24 +672,24 @@ export class PropertyService {
         capRate: dto.capRate_m,
         netOperatingIncome: dto.netOperatingIncome_m,
         dscr: dto.DSCR_m,
-        crimeScore: dto.crimeScore,
+        crimeScore: dto.crimeScore ?? dto.dealScoreboard?.breakdown?.find((item: any) => item.name === 'Crime Score')?.value,
         userId,
-        monthlyRent: dto.incomeExpance.income.monthlyRent,
-        annualRent: dto.incomeExpance.income.annualRent,
-        effectiveIncome: dto.incomeExpance.income.effectiveIncome,
-        totalExpenses: dto.incomeExpance.expenses.totalExpenses,
-        noi: dto.incomeExpance.noi,
-        monthlyMortgage: dto.incomeExpance.mortgage.monthlyMortgage,
-        annualMortgage: dto.incomeExpance.mortgage.annualMortgage,
-        annualNetCashFlow: dto.incomeExpance.netCashFlow.annual,
-        purchaseLoanAmount: dto.incomeExpance.financing.purchaseLoanAmount,
-        loanPointsCost: dto.incomeExpance.financing.loanPointsCost,
-        totalScore: dto.dealScoreboard.totalScore,
-        scoreBoardStatus: dto.dealScoreboard.rating,
+        monthlyRent: dto.incomeExpance?.income?.monthlyRent,
+        annualRent: dto.incomeExpance?.income?.annualRent,
+        effectiveIncome: dto.incomeExpance?.income?.effectiveIncome,
+        totalExpenses: dto.incomeExpance?.expenses?.totalExpenses,
+        noi: dto.incomeExpance?.noi,
+        monthlyMortgage: dto.incomeExpance?.mortgage?.monthlyMortgage,
+        annualMortgage: dto.incomeExpance?.mortgage?.annualMortgage,
+        annualNetCashFlow: dto.incomeExpance?.netCashFlow?.annual,
+        purchaseLoanAmount: dto.incomeExpance?.financing?.purchaseLoanAmount,
+        loanPointsCost: dto.incomeExpance?.financing?.loanPointsCost,
+        totalScore: dto.dealScoreboard?.totalScore,
+        scoreBoardStatus: dto.dealScoreboard?.rating,
       },
     });
 
-    if (dto.dealScoreboard.breakdown.length > 0) {
+    if (dto.dealScoreboard?.breakdown?.length > 0) {
       await this.prisma.scoreBreakdown.createMany({
         data: dto.dealScoreboard.breakdown.map((item: any) => ({
           propertyId: property.propertyId,
