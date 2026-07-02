@@ -177,8 +177,8 @@ export class PropertyService {
       {
         name: 'Crime Score',
         value: crimeScore,
-        score: Math.round(crimeScore / 10),
-        status: crimeScore >= 70 ? 'GOOD' : crimeScore >= 50 ? 'AVERAGE' : 'BAD',
+        score: Math.round((100 - crimeScore) / 10),
+        status: crimeScore <= 33 ? 'GOOD' : crimeScore <= 66 ? 'AVERAGE' : 'BAD',
       },
     ];
 
@@ -320,8 +320,8 @@ export class PropertyService {
       {
         name: 'Crime Score',
         value: crimeScore,
-        score: Math.round(crimeScore / 10),
-        status: crimeScore >= 70 ? 'GOOD' : crimeScore >= 50 ? 'AVERAGE' : 'BAD',
+        score: Math.round((100 - crimeScore) / 10),
+        status: crimeScore <= 33 ? 'GOOD' : crimeScore <= 66 ? 'AVERAGE' : 'BAD',
       },
     ];
 
@@ -466,8 +466,8 @@ export class PropertyService {
       {
         name: 'Crime Score',
         value: crimeScore,
-        score: Math.round(crimeScore / 10),
-        status: crimeScore >= 70 ? 'GOOD' : crimeScore >= 50 ? 'AVERAGE' : 'BAD',
+        score: Math.round((100 - crimeScore) / 10),
+        status: crimeScore <= 33 ? 'GOOD' : crimeScore <= 66 ? 'AVERAGE' : 'BAD',
       },
     ];
 

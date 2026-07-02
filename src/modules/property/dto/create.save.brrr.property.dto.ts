@@ -17,8 +17,8 @@ class BreakdownDto {
   name!: string;
 
   @ApiProperty({ example: -5041.56 })
-  @IsNumber()
-  value!: number;
+  @IsOptional()
+  value!: any;
 
   @ApiProperty({ example: 0 })
   @IsNumber()
@@ -221,9 +221,10 @@ export class CreateBrrrrDto {
   @IsNumber()
   capRate_m!: number;
 
-  @ApiProperty({ example: 3.66 })
+  @ApiProperty({ example: 3.66, required: false })
+  @IsOptional()
   @IsNumber()
-  crimeScore!: number;
+  crimeScore?: number;
 
   @ApiProperty({ example: 0.61 })
   @IsNumber()
