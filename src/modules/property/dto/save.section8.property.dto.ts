@@ -63,6 +63,8 @@ export class SaveSection8PropertyDataDto {
   @IsOptional()
   capexRate?: number;
 
+
+
   @ApiProperty({
     example: {
       KeyMetrics: {

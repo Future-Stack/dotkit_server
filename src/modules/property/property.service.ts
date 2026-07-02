@@ -486,6 +486,7 @@ export class PropertyService {
       maintenanceRate: dto.maintenanceRate,
       managementRate: dto.managementRate,
       capexRate: dto.capexRate,
+
       responseData: {
         KeyMetrics: {
           DSCR: Number(dscr.toFixed(2)),
@@ -757,6 +758,32 @@ export class PropertyService {
 
 
   async saveSection8Property(userId: string, dto: Section8RequestDto) {
+
+    console.log("RAW DTO PAYLOAD:", JSON.stringify(dto, null, 2));
+    console.log("Incoming DTO keys:", Object.keys(dto));
+    console.log("FMR values at root:", {
+      fmrStudio: dto.fmrStudio,
+      fmrOneBed: dto.fmrOneBed,
+    });
+    console.log("FMR values in responseData:", {
+      fmrStudio: dto.responseData?.fmrStudio,
+      fmrOneBed: dto.responseData?.fmrOneBed,
+    });
+    console.log("FMR values in fmrData:", dto['fmrData']);
+
+    const fmrStudio = dto.fmrStudio ?? dto.responseData?.fmrStudio ?? dto['fmrData']?.fmrStudio;
+    const fmrOneBed = dto.fmrOneBed ?? dto.responseData?.fmrOneBed ?? dto['fmrData']?.fmrOneBed;
+    const fmrTwoBed = dto.fmrTwoBed ?? dto.responseData?.fmrTwoBed ?? dto['fmrData']?.fmrTwoBed;
+    const fmrThreeBed = dto.fmrThreeBed ?? dto.responseData?.fmrThreeBed ?? dto['fmrData']?.fmrThreeBed;
+    const fmrFourBed = dto.fmrFourBed ?? dto.responseData?.fmrFourBed ?? dto['fmrData']?.fmrFourBed;
+
+    console.log("Resolved FMR Studio", fmrStudio);
+    console.log("Resolved FMR One Bed", fmrOneBed);
+    console.log("Resolved FMR Two Bed", fmrTwoBed);
+    console.log("Resolved FMR Three Bed", fmrThreeBed);
+    console.log("Resolved FMR Four Bed", fmrFourBed);
+
+
     const property = await this.prisma.propertyCalculation.create({
       data: {
         strategy: 'SECTION_8',
@@ -793,11 +820,11 @@ export class PropertyService {
         totalScore: dto.responseData?.dealScoreboard?.totalScore,
         latitude: dto?.latitude,
         longitude: dto?.longitude,
-        fmrStudio: dto?.fmrStudio,
-        fmrOneBed: dto?.fmrOneBed,
-        fmrTwoBed: dto?.fmrTwoBed,
-        fmrThreeBed: dto?.fmrThreeBed,
-        fmrFourBed: dto?.fmrFourBed,
+        fmrStudio,
+        fmrOneBed,
+        fmrTwoBed,
+        fmrThreeBed,
+        fmrFourBed,
 
       },
     });
