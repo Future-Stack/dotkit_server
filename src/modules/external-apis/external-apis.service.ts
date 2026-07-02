@@ -119,9 +119,7 @@ export class ExternalApisService {
     };
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 2. HUD FMR (Fair Market Rent)
-  // ─────────────────────────────────────────────────────────────────────────────
+
   async getFmrData(stateCode: string, countyName?: string, cityName?: string): Promise<FmrResult | null> {
     if (!stateCode) return null;
 
@@ -174,9 +172,7 @@ export class ExternalApisService {
     return null;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 2.1 TEST ENDPOINT LOGIC: HUD FMR via FIPS Code (Specifically for Section 8)
-  // ─────────────────────────────────────────────────────────────────────────────
+
   async testHudSection8Fmr(latitude: number, longitude: number, county: string, state: string, zipCode?: string): Promise<any> {
     const hudApiKey = this.configService.get<string>('HUD_API_TOKEN');
     if (!hudApiKey) return { error: 'HUD_API_TOKEN not set' };
@@ -260,9 +256,7 @@ export class ExternalApisService {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 3. RENTCAST — Rental & Sold Comps
-  // ─────────────────────────────────────────────────────────────────────────────
+
   async getRentalAndSoldComps(
     latitude: number,
     longitude: number,
@@ -372,10 +366,7 @@ export class ExternalApisService {
   }
 
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // NOTE: FBI SAPI API (/summarized/state/*, /summarized/agency/*) was deprecated
-  // and removed in 2024-2025. All endpoints return 404. Using embedded UCR 2022
-  // state-level data for reliable, instant results without API calls.
+
   async getCrimeData(latitude: number, longitude: number, state?: string, city?: string): Promise<CrimeResult> {
     const fbiKey = this.configService.get<string>('FBI_API_KEY');
 
@@ -392,7 +383,7 @@ export class ExternalApisService {
     return this.fetchFbiStateData(state);
   }
 
-  // ─── FBI: State-level data from embedded UCR 2022 dataset ────────────────────
+
   private fetchFbiStateData(stateAbbr: string): CrimeResult {
     const per100k = FBI_STATE_CRIME_RATE_PER_100K[stateAbbr.toUpperCase()];
 
@@ -430,7 +421,7 @@ export class ExternalApisService {
     };
   }
 
-  // ─── Map raw FBI response → CrimeResult ──────────────────────────────────────
+
   private mapFbiResponseToResult(results: any[], areaLabel: string): CrimeResult {
     // FBI results are per-offense-type per agency; aggregate them
     const offenseTotals: Record<string, number> = {};
@@ -489,15 +480,7 @@ export class ExternalApisService {
     };
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // HELPERS
-  // ─────────────────────────────────────────────────────────────────────────────
 
-  /**
-   * Converts FBI offense rate (per 100k population) to a 0-100 safety score.
-   * Higher = safer.
-   * National baseline ~2,109 per 100k (FBI UCR 2022).
-   */
   private computeCrimeScoreFromRate(per100k: number): number {
     if (per100k === 0) return 50; // No data — neutral
 
@@ -567,7 +550,7 @@ export class ExternalApisService {
     );
   }
 
-  /** Convert a raw FBI offense slug to a readable label */
+
   private formatOffenseKey(key: string): string {
     return key
       .split('-')
