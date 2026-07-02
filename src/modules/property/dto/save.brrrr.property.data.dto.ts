@@ -132,6 +132,12 @@ export class SaveBrrrPropertyDataDto {
             score: 0,
             status: 'BAD',
           },
+          {
+            name: 'Crime Score',
+            value: 50,
+            score: 5,
+            status: 'AVERAGE',
+          },
         ],
       },
     },

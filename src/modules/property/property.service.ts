@@ -154,6 +154,7 @@ export class PropertyService {
     const dscr = refiMortgage * 12 > 0 ? noi / (refiMortgage * 12) : 0;
     const capRate = (noi / dto.arvAfterRepairValue) * 100;
     const onePercentRule = dto.monthlyRent >= allInCost * 0.01;
+    const crimeScore = dto.crimeScore ?? 50;
 
     // ─── Scoreboard ────────────────────────────────────────────────────────
     const scoreLookup = (val: number, good: number, avg: number) => {
@@ -172,6 +173,12 @@ export class PropertyService {
         value: onePercentRule,
         score: onePercentRule ? 10 : 0,
         status: onePercentRule ? 'GOOD' : 'BAD',
+      },
+      {
+        name: 'Crime Score',
+        value: crimeScore,
+        score: Math.round((100 - crimeScore) / 10),
+        status: crimeScore <= 33 ? 'GOOD' : crimeScore <= 66 ? 'AVERAGE' : 'BAD',
       },
     ];
 
@@ -313,8 +320,8 @@ export class PropertyService {
       {
         name: 'Crime Score',
         value: crimeScore,
-        score: Math.round(crimeScore / 10),
-        status: crimeScore >= 70 ? 'GOOD' : crimeScore >= 50 ? 'AVERAGE' : 'BAD',
+        score: Math.round((100 - crimeScore) / 10),
+        status: crimeScore <= 33 ? 'GOOD' : crimeScore <= 66 ? 'AVERAGE' : 'BAD',
       },
     ];
 
@@ -459,8 +466,8 @@ export class PropertyService {
       {
         name: 'Crime Score',
         value: crimeScore,
-        score: Math.round(crimeScore / 10),
-        status: crimeScore >= 70 ? 'GOOD' : crimeScore >= 50 ? 'AVERAGE' : 'BAD',
+        score: Math.round((100 - crimeScore) / 10),
+        status: crimeScore <= 33 ? 'GOOD' : crimeScore <= 66 ? 'AVERAGE' : 'BAD',
       },
     ];
 

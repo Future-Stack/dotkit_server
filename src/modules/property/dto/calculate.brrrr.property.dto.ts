@@ -139,4 +139,9 @@ export class CalculateBrrrPropertyDto {
   @ApiProperty({ example: 2 })
   @IsNumber()
   loanPoints!: number;
+
+  @ApiProperty({ example: 60, required: false })
+  @IsOptional()
+  @IsNumber()
+  crimeScore?: number;
 }
